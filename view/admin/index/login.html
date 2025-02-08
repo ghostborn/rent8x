@@ -45,22 +45,42 @@
         <t-icon name="logo-github" class="icon"/>
       </t-button>
       <t-button theme="default" shape="square" variant="text" @click="navToHelper">
-        <t-icon name="help-circle" class="icon" />
+        <t-icon name="help-circle" class="icon"/>
       </t-button>
     </div>
   </div>
 
   <div class="login-container">
     <div class="title-container">
-<!--      <h1 class="title margin-no">登录到</h1>-->
+      <!--      <h1 class="title margin-no">登录到</h1>-->
       <h1 class="title">出租屋管理系统</h1>
     </div>
 
     <div style="width: 350px">
+      <t-form ref="form" :data="formData" :rules="FORM_RULES" :colon="true" :label-width="0">
+        <t-form-item name="username">
+          <t-input v-model="formData.username" clearable placeholder="请输入账户名">
+            <template #prefix-icon>
+              <t-icon name="user"/>
+            </template>
+          </t-input>
+        </t-form-item>
 
+        <t-form-item name="password">
+          <t-input v-model="formData.password" type="password" clearable placeholder="请输入密码" @enter="onSubmit">
+            <template #prefix-icon>
+              <t-icon name="lock-on"/>
+            </template>
+          </t-input>
+        </t-form-item>
+
+        <t-form-item>
+          <t-button theme="primary" @click="onSubmit" block size="medium">登录</t-button>
+        </t-form-item>
+      </t-form>
     </div>
   </div>
-
+  <footer class="copyright">Copyright @ 2024-{{new Date().getFullYear()}} GALAXY All Rights Reserved</footer>
 </div>
 
 <script>
@@ -68,8 +88,74 @@
     data() {
       return {
         loading: false,
+        formData: {
+          username: '',
+          password: '',
+        },
+        FORM_RULES: {
+          username: [{required: true, message: '账号必填', type: 'error'}],
+          password: [{required: true, message: '密码必填', type: 'error'},
+            {min: 6, message: '密码最少6位数', type: 'error', trigger: 'blur'},],
+        }
       }
+    },
+    methods: {
+      onSubmit() {
+        this.$refs.form.validate().then((valid) => {
+          if (valid == true) {
+            this.login();
+          }
+        })
+      },
+
+      async login() {
+        try {
+          this.loading = true;
+          const response = await axios.post("{:url('Index/login')}", this.formData, {
+            headers: {
+              'X-CSRF-TOKEN': '{$token}'
+            }
+          });
+          console.log(response, 'response')
+          if (response.status == 200) {
+            if (response.data.code) {
+              location.href = "{:url('Index/index')}";
+              this.$message.success({
+                content: response.data.msg,
+                duration: 1500,
+              });
+            } else {
+              this.$message.error({
+                content: response.data.msg,
+                duration: 1500,
+              })
+            }
+            this.loading = false;
+          }
+        } catch (error) {
+          this.loading = false;
+          this.$message.error({
+            content: '系统出错',
+            duration: 1500,
+          });
+          console.error('请求失败：', error);
+
+        }
+      },
+
+
+      navToGitee: function () {
+        window.open('https://gitee.com/MarcoMaHH/rent8');
+      },
+
+      navToHelper: function () {
+        window.open('https://mp.weixin.qq.com/s/Gr3Xl7rkS2_cjpBXTwaTtw');
+      },
+
+
     }
+
+
   };
   const app = Vue.createApp(App);
   app.use(TDesign);

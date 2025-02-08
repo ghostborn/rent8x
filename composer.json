@@ -26,7 +26,9 @@
         "topthink/think-filesystem": "^2.0",
         "topthink/think-multi-app": "^1.1",
         "topthink/think-view": "^2.0",
-        "liliuwei/thinkphp-jump": "2.*"
+        "liliuwei/thinkphp-jump": "2.*",
+        "firebase/php-jwt": "^6.11"
+
     },
     "require-dev": {
         "topthink/think-dumper": "^1.0",
