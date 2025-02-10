@@ -1,9 +1,10 @@
 <t-head-menu value="item1" height="120px">
   <template #logo>
-    <a style="color: #0052d9; text-decoration: none;font-size: 150%;" href="{:url('/admin/index/index')}">最常用出租屋管理系统</a>
+    <a style="color: #0052d9; text-decoration: none;font-size: 150%;"
+       href="{:url('/admin/index/index')}">出租屋管理系统</a>
   </template>
   <t-button theme="default" shape="square" variant="text" @click="changeCollapsed">
-    <t-icon class="collapsed-icon" name="view-list" />
+    <t-icon class="collapsed-icon" name="view-list"/>
   </t-button>
   <div style="margin:0 0 0 15px;">
     <t-select v-model="houseDef" label="房产：" placeholder="请选择房产" auto-width @change="changeHouse" filterable>
@@ -14,20 +15,20 @@
     <div style="margin-bottom:3px; margin-right: 10px;">
       <t-popup content="微信小程序" overlayClassName="overlay">
         <t-button theme="default" shape="square" variant="text" @click="miniProgram">
-          <t-icon name="logo-wechat-stroke" />
+          <t-icon name="logo-wechat-stroke"/>
         </t-button>
       </t-popup>
     </div>
     <div style="margin-bottom:3px; margin-right: 10px;">
       <t-popup content="代码仓库" overlayClassName="overlay">
         <t-button theme="default" shape="square" variant="text" @click="navToGitee">
-          <t-icon name="logo-github" />
+          <t-icon name="logo-github"/>
         </t-button>
       </t-popup>
     </div>
     <t-popup content="帮助文档">
       <t-button theme="default" shape="square" variant="text" @click="navToHelper">
-        <t-icon name="help-circle" />
+        <t-icon name="help-circle"/>
       </t-button>
     </t-popup>
     <t-dropdown trigger="click">
@@ -43,24 +44,26 @@
       </template>
       <t-button class="header-user-btn" theme="default" variant="text">
         <template #icon>
-          <t-icon class="header-user-avatar" name="user-circle" />
+          <t-icon class="header-user-avatar" name="user-circle"/>
         </template>
-        <div class="header-user-account">{$layout_login_user.username}</div>
-        <template #suffix><t-icon name="chevron-down" /></template>
+        <div class="header-user-account">{{}}</div>
+        <template #suffix>
+          <t-icon name="chevron-down"/>
+        </template>
       </t-button>
     </t-dropdown>
   </template>
 </t-head-menu>
 
 <t-dialog v-model:visible="passwordVisible" header="修改密码" width="40%" :confirm-on-enter="true"
-  :on-confirm="passwordSave">
+          :on-confirm="passwordSave">
   <t-space direction="vertical" style="width: 100%">
     <t-form ref="passwordForm" :data="passwordData" :rules="passwordRules" reset-type="empty">
       <t-form-item label="新密码" name="password">
-        <t-input placeholder="请输入新密码" v-model="passwordData.password" type="password" />
+        <t-input placeholder="请输入新密码" v-model="passwordData.password" type="password"/>
       </t-form-item>
       <t-form-item label="再次输入密码" name="password2">
-        <t-input placeholder="请输入新密码" v-model="passwordData.password2" type="password" />
+        <t-input placeholder="请输入新密码" v-model="passwordData.password2" type="password"/>
       </t-form-item>
     </t-form>
   </t-space>
@@ -68,8 +71,7 @@
 
 <t-dialog v-model:visible="miniProgramVisible" :close-btn="false" :footer="false" header="微信小程序" width="307px">
   <t-space direction="vertical" style="width: 100%">
-    <t-image src="__STATIC__/images/project.jpg" :style="{ width: '240px', height: '240px' }" />
+    <t-image src="__STATIC__/images/project.jpg" :style="{width:'240px',height:'240px'}"/>
   </t-space>
 </t-dialog>
-
 <t-loading :loading="loading" text="加载中..." fullscreen />

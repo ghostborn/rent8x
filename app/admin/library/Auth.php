@@ -3,8 +3,6 @@
 namespace app\admin\library;
 
 use app\admin\model\AdminUser as UserModel;
-use app\admin\model\AdminMenu as MenuModel;
-use app\admin\model\AdminRole as RoleModel;
 use think\facade\Session;
 
 class Auth
@@ -59,41 +57,10 @@ class Auth
 
     public function isLogin()
     {
+//        Session::clear();
         return Session::has($this->sessionName . '.id') && $this->getLoginUser();
     }
 
-    public function logout()
-    {
-        Session::delete($this->sessionName);
-        return true;
-    }
-
-    public function menu($controller)
-    {
-        $user = $this->getLoginUser();
-        $menu = MenuModel::tree();
-        $data = $menu->getData();
-        $result = [];
-        foreach ($user['admin_permission'] as $v) {
-            if ($v['controller'] === '*') {
-                $result = $data;
-                break;
-            }
-            foreach ($data as $vv) {
-                if (strtolower($v['controller']) === strtolower($vv['controller'])) {
-                    $result[] = $vv;
-                    break;
-                }
-            }
-        }
-        return $menu->data($result)->getTree(strtolower($controller));
-    }
-
-    public function changePassword($password)
-    {
-        $id = Session::get($this->sessionName . '.id');
-        UserModel::find($id)->save(['password' => $password]);
-    }
 
     public function getLoginUser($field = null)
     {
@@ -104,32 +71,10 @@ class Auth
         return $field ? $this->loginUser[$field] : $this->loginUser;
     }
 
-    public function checkAuth($controller, $action)
+    public function menu($controller)
     {
         $user = $this->getLoginUser();
-        if (!RoleModel::where('state', 'Y')->find($user['admin_role_id'])) {
-            return false;
-        }
-        foreach ($user['admin_permission'] as $v) {
-            if ($v['controller'] === '*') {
-                return true;
-            }
-            if (strtolower($v['controller']) === strtolower($controller)) {
-                if ($v['action'] === '*') {
-                    return true;
-                }
-                if (in_array($action, explode(',', $v['action']))) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
-    public function currentRoute($controller)
-    {
-        $menu = MenuModel::tree();
-        $data = $menu->getData();
-        return $menu->data($data)->getCurrentRoute(strtolower($controller));
-    }
+
 }

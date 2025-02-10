@@ -113,10 +113,9 @@
           this.loading = true;
           const response = await axios.post("{:url('Index/login')}", this.formData, {
             headers: {
-              'X-CSRF-TOKEN': '{$token}'
-            }
+              'X-CSRF-TOKEN': '{$token}',
+            },
           });
-          console.log(response, 'response')
           if (response.status == 200) {
             if (response.data.code) {
               location.href = "{:url('Index/index')}";
@@ -128,7 +127,7 @@
               this.$message.error({
                 content: response.data.msg,
                 duration: 1500,
-              })
+              });
             }
             this.loading = false;
           }
@@ -139,7 +138,6 @@
             duration: 1500,
           });
           console.error('请求失败：', error);
-
         }
       },
 

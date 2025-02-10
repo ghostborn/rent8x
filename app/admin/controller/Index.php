@@ -5,7 +5,6 @@ namespace app\admin\controller;
 use app\admin\model\AdminUser as UserModel;
 use think\facade\View;
 
-
 class Index extends Common
 {
 	protected  $checkLoginExclude = ['login', 'logout'];
@@ -29,8 +28,6 @@ class Index extends Common
 			$user = UserModel::find($loginUser['id']);
 			$user->save(['login_date' => date("Y-m-d H:i:s")]);
 			return $this->returnSuccess('登陆成功');
-
-
 		}
 		View::assign('thisYear', date("Y"));
 		View::assign('token', $this->getToken());
