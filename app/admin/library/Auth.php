@@ -3,6 +3,7 @@
 namespace app\admin\library;
 
 use app\admin\model\AdminUser as UserModel;
+use app\admin\model\AdminMenu as MenuModel;
 use think\facade\Session;
 
 class Auth
@@ -74,6 +75,29 @@ class Auth
     public function menu($controller)
     {
         $user = $this->getLoginUser();
+        $menu = MenuModel::tree();
+        $data = $menu->getData();
+        $result = [];
+        foreach ($user['admin_permission'] as $v) {
+            if ($v['controller'] === '*') {
+                $result = $data;
+                break;
+            }
+            foreach ($data as $vv) {
+                if (strtolower($v['controller']) === strtolower($vv['controller'])) {
+                    $result[] = $vv;
+                    break;
+                }
+            }
+        }
+        return $menu->data($result)->getTree(strtolower($controller));
+    }
+
+    public function currentRoute($controller)
+    {
+        $menu = MenuModel::tree();
+        $data = $menu->getData();
+        return $menu->data($data)->getCurrentRoute(strtolower($controller));
     }
 
 

@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <title>rent8-最常用出租屋管理系统</title>
+  <title>rent8-出租屋管理系统</title>
   <!-- 导入 Vue3 -->
   <script src="__CDN__/vue/3.4.19/vue.global.js"></script>
   <!-- 引入Vue Router -->
@@ -43,7 +43,8 @@
   <t-layout>
     <t-header>{include file="common/pub/header" /}</t-header>
     <t-layout style="border-top: 1px solid #eeeeee;">
-
+      <t-aside :width="isCollapse ? '70px' : '240px'">{include file="common/pub/aside" /}</t-aside>
+      <t-content style="margin: 15px"> {block name="main"}{/block}</t-content>
     </t-layout>
   </t-layout>
 </div>

@@ -9,7 +9,6 @@ use think\facade\View;
 use Firebase\JWT\JWT;
 
 
-
 class Common extends BaseController
 {
     protected $auth;
@@ -41,8 +40,11 @@ class Common extends BaseController
         $loginUser = $this->auth->getLoginUser();
 //        View::assign('layout_login_user', ['id' => $loginUser['id'], 'username' => $loginUser['username'], 'expiration_date' => $loginUser['expiration_date']]);
 
-    }
+        if (!$this->request->isAjax()) {
+            View::assign('layout_menu', $this->auth->menu($controller));
 
+        }
+    }
 
 
     public function getToken()
@@ -61,8 +63,8 @@ class Common extends BaseController
             $count = \count($data);
         }
         $data = [
-            "code" =>  $code,
-            "msg" =>  $msg,
+            "code" => $code,
+            "msg" => $msg,
             "count" => $count,
             "data" => $data
         ];
@@ -73,7 +75,7 @@ class Common extends BaseController
     {
         $data = [
             "code" => 0,
-            "msg" =>  $msg
+            "msg" => $msg
         ];
         return \json($data);
     }
@@ -82,7 +84,7 @@ class Common extends BaseController
     {
         $data = [
             "code" => 1,
-            "msg" =>  $msg
+            "msg" => $msg
         ];
         return \json($data);
     }
