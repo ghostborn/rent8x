@@ -52,6 +52,7 @@
 {block name="script"}{/block}
 <script>
 
+  this.token = '{$layout_token}';
   const common_data = {
     isCollapse: false,
 
@@ -79,6 +80,20 @@
     return {
       changeCollapsed: function () {
         this.isCollapse = !this.isCollapse;
+      },
+
+      onLogout: function () {
+        let that = this;
+        axiosPost('{:url("Index/logout")}', {}).then(response => {
+          if (response.state == 'success') {
+            that.$message.success(response.msg);
+            window.location.href = '{:url("index/login")}';
+          } else {
+            that.$message({
+              message: response.msg, type: response.state
+            })
+          }
+        })
       },
 
       miniProgram: function () {

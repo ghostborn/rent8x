@@ -42,6 +42,7 @@ class Common extends BaseController
 
         if (!$this->request->isAjax()) {
             View::assign('layout_menu', $this->auth->menu($controller));
+            View::assign('layout_token', $this->getToken());
 
         }
     }

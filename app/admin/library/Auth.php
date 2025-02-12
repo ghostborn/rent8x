@@ -62,6 +62,12 @@ class Auth
         return Session::has($this->sessionName . '.id') && $this->getLoginUser();
     }
 
+    public function logout()
+    {
+        Session::delete($this->sessionName);
+        return true;
+    }
+
 
     public function getLoginUser($field = null)
     {

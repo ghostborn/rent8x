@@ -34,6 +34,12 @@ class Index extends Common
         return View::fetch();
     }
 
+    public function logout()
+    {
+        $this->auth->logout();
+        return $this->returnSuccess('退出成功');
+    }
+
     public function queryHouseInfo()
     {
         $loginUser = $this->auth->getLoginUser();
