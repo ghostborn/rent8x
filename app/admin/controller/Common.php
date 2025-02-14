@@ -8,6 +8,12 @@ use think\facade\Session;
 use think\facade\View;
 use Firebase\JWT\JWT;
 
+// billSum类型
+//类型-收入
+define('TYPE_INCOME', 'I');
+//类型-支出
+define('TYPE_EXPENDITURE', 'E');
+
 
 class Common extends BaseController
 {
@@ -38,7 +44,7 @@ class Common extends BaseController
 //            return $this->error('您没有操作权限', '/admin/index/login');
 //        }
         $loginUser = $this->auth->getLoginUser();
-//        View::assign('layout_login_user', ['id' => $loginUser['id'], 'username' => $loginUser['username'], 'expiration_date' => $loginUser['expiration_date']]);
+        View::assign('layout_login_user', ['id' => $loginUser['id'], 'username' => $loginUser['username'], 'expiration_date' => $loginUser['expiration_date']]);
 
         if (!$this->request->isAjax()) {
             View::assign('layout_menu', $this->auth->menu($controller));

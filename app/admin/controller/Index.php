@@ -2,6 +2,10 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\HouseProperty as PropertyModel;
+use app\admin\model\HouseContract as ContractModel;
+
+use app\admin\model\BillSum as SumModel;
 use app\admin\model\AdminUser as UserModel;
 use think\facade\View;
 
@@ -45,9 +49,69 @@ class Index extends Common
         $loginUser = $this->auth->getLoginUser();
         $user = UserModel::find($loginUser['id']);
         $number_count = $user->houseNumber->count();
-        var_dump($number_count);
+        $empty_count = $user->houseNumber->where('rent_mark', 'N')->count();
+        $occupancy = $number_count == 0 ? '0%' : round((($number_count - $empty_count) / $number_count) * 100) . '%';
+        $property = PropertyModel::where('admin_user_id', $loginUser['id'])->select()->toArray();
+        $result = array_map(function ($item) {
+            return $item['id'];
+        }, $property);
+        $accounting_month = date('Y-m');
+        $income = SumModel::where('house_property_id', 'in', $result)
+            ->where('type', TYPE_INCOME)
+            ->where('accounting_date', $accounting_month)
+            ->sum('amount');
+        $spending = SumModel::where('house_property_id', 'in', $result)
+            ->where('type', TYPE_EXPENDITURE)
+            ->where('accounting_date', $accounting_month)
+            ->sum('amount');
+        $contract = ContractModel::where('house_property_id', 'in', $result)
+            ->whereNotNull('end_date')
+            ->count();
+        $house_info = [
+            'number_count' => $number_count,
+            'empty_count' => $empty_count,
+            'occupancy' => $occupancy,
+            'profit' => round($income - $spending, 2),
+            'contract_count' => $contract,
+        ];
+        return $this->returnResult($house_info);
+    }
+
+    public function echar()
+    {
+        $loginUser = $this->auth->getLoginUser();
+        $property = PropertyModel::where('admin_user_id', $loginUser['id'])->select()->toArray();
+        $result = array_map(function ($item) {
+            return $item['id'];
+        }, $property);
+        $currentDate = new \DateTime();
+        $currentDate->modify('first day of this month');
+        $charData = array();
+        for ($i = 12; $i >= 0; $i--) {
+            $month = clone $currentDate;
+            $setDate = $month->modify("-{$i} month")->format('Y-m');
+            $income = SumModel::where('house_property_id', 'in', $result)
+                ->where('type', TYPE_INCOME)
+                ->where('accounting_date', $setDate)
+                ->sum('amount');
+            $spending = SumModel::where('house_property_id', 'in', $result)
+                ->where('type', TYPE_EXPENDITURE)
+                ->where('accounting_date', $setDate)
+                ->sum('amount');
+            \array_push($charData, ['month' => $setDate, 'project' => '收入', 'money' => round($income, 2)]);
+            \array_push($charData, ['month' => $setDate, 'project' => '支出', 'money' => round($spending, 2)]);
+            \array_push($charData, ['month' => $setDate, 'project' => '利润', 'money' => round($income - $spending, 2)]);
+        }
+        return $this->returnResult($charData);
+    }
+
+    public function queryBill()
+    {
 
     }
+
+
+
 
 
 }
