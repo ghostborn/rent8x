@@ -4,6 +4,8 @@ namespace app\admin\library;
 
 use app\admin\model\AdminUser as UserModel;
 use app\admin\model\AdminMenu as MenuModel;
+use app\admin\model\AdminRole as RoleModel;
+
 use think\facade\Session;
 
 class Auth
@@ -29,6 +31,7 @@ class Auth
             return false;
         }
         Session::set($this->sessionName, ['id' => $user->id]);
+
         return true;
     }
 
@@ -68,6 +71,14 @@ class Auth
         return true;
     }
 
+    public function changePassword($password)
+    {
+        $id = Session::get($this->sessionName . '.id');
+        $user = UserModel::where('username', $this->sessionName)->find();
+        $newpassword = $this->passwordMD5($password, $user->salt);
+        UserModel::find($id)->save(['password' => $newpassword]);
+    }
+
 
     public function getLoginUser($field = null)
     {
@@ -76,6 +87,28 @@ class Auth
             $this->loginUser = UserModel::with('adminPermission')->find($id);
         }
         return $field ? $this->loginUser[$field] : $this->loginUser;
+    }
+
+    public function checkAuth($controller, $action)
+    {
+        $user = $this->getLoginUser();
+        if (!RoleModel::where('state', 'Y')->find($user['admin_role_id'])) {
+            return false;
+        }
+        foreach ($user['admin_permission'] as $v) {
+            if ($v['controller'] === '*') {
+                return true;
+            }
+            if (strtolower($v['controller']) === strtolower($controller)) {
+                if ($v['action'] === '*') {
+                    return true;
+                }
+                if (in_array($action, explode(',', $v['action']))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public function menu($controller)

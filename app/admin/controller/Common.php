@@ -40,15 +40,20 @@ class Common extends BaseController
         if (!$this->auth->isLogin()) {
             return $this->error('请重新登录', '/admin/index/login');
         }
-//        if (!$this->auth->checkAuth($controller, $action)) {
-//            return $this->error('您没有操作权限', '/admin/index/login');
-//        }
+        if (!$this->auth->checkAuth($controller, $action)) {
+            return $this->error('您没有操作权限', '/admin/index/login');
+        }
         $loginUser = $this->auth->getLoginUser();
-        View::assign('layout_login_user', ['id' => $loginUser['id'], 'username' => $loginUser['username'], 'expiration_date' => $loginUser['expiration_date']]);
+        View::assign('layout_login_user', [
+            'id' => $loginUser['id'],
+            'username' => $loginUser['username'],
+            'expiration_date' => $loginUser['expiration_date']
+        ]);
 
         if (!$this->request->isAjax()) {
             View::assign('layout_menu', $this->auth->menu($controller));
             View::assign('layout_token', $this->getToken());
+            View::assign('current_route', $this->auth->currentRoute($controller));
 
         }
     }
