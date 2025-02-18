@@ -20,8 +20,34 @@
       </t-space>
     </template>
   </t-table>
-
 </t-card>
+
+<!-- 新增FORM -->
+<t-dialog v-model:visible="dialogVisible" :header="formHeader" :width="680" :footer="false">
+  <t-form ref="propertyForm" :data="formData" :rules="rules" :label-width="100" @submit="handleSave">
+    <t-form-item label="房产名" name="name">
+      <t-input v-model="formData.name" :style="{ width: '480px' }" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="详细地址" name="address">
+      <t-input v-model="formData.address" :style="{ width: '480px' }" placeholder="请输入（PS:用于合同展示）"/>
+    </t-form-item>
+    <t-form-item label="房东名称" name="landlord">
+      <t-input v-model="formData.landlord" :style="{ width: '480px' }" placeholder="请输入（PS:用于合同展示）"/>
+    </t-form-item>
+    <t-form-item label="房东手机" name="phone">
+      <t-input v-model="formData.phone" :style="{ width: '480px' }" placeholder="请输入（PS:用于合同展示）"/>
+    </t-form-item>
+    <t-form-item label="房东身份证" name="id_card">
+      <t-input v-model="formData.id_card" :style="{ width: '480px' }" placeholder="请输入（PS:用于合同展示）"/>
+    </t-form-item>
+    <t-form-item style="float: right">
+      <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
+      <t-button theme="primary" type="submit">确定</t-button>
+    </t-form-item>
+  </t-form>
+</t-dialog>
+
+
 {/block}
 
 
@@ -38,6 +64,14 @@
       {title: '房东身份证', colKey: 'id_card', width: 160},
       {title: '操作', colKey: 'op', width: 160, align: 'left', fixed: 'right',},
     ],
+    dialogVisible: false,
+    formData: {},
+    formHeader: '',
+    rules: {
+      name: [{required: true, message: '房产名不能为空', trigger: 'blur'}],
+      phone: [{telnumber: true, message: '请输入正确的手机号码', trigger: 'blur'}],
+      id_card: [{idcard: true, message: '请输入正确的身份证号码', trigger: 'blur'}],
+    },
   };
 
   function f() {
@@ -56,8 +90,55 @@
       },
 
       handleAdd() {
+        this.$refs.propertyForm.reset();
+        this.formData = {};
+        this.formHeader = '新增房产';
+        this.dialogVisible = true;
+      },
 
-      }
+      handleEdit(row) {
+        this.$refs.propertyForm.reset();
+        this.formData = {...row};
+        this.formHeader = '修改房产';
+        this.dialogVisible = true;
+      },
+
+      handleDelete(row) {
+        if (this.tableData.length == 1) {
+          this.$message.warning('不能删除全部房产');
+        } else {
+          axiosPost("{:url('delete')}", row).then(response => {
+            if (response.state == 'success') {
+              this.$message.success(response.msg);
+              this.init();
+            } else if (response.state == 'warning') {
+              this.$message.warning(response.msg);
+            } else {
+              this.$message.error(response.msg);
+            }
+          })
+        }
+      },
+
+      handleSave() {
+        this.$refs.propertyForm.validate().then((valid) => {
+          if (valid == true) {
+            axiosPost("{:url('save')}", this.formData).then(response => {
+              if (response.state == 'success') {
+                this.$message.success(response.msg);
+                this.dialogVisible = false;
+                this.init();
+              } else if (response.state == 'warning') {
+                this.$message.warning(response.msg);
+              } else {
+                this.$message.error(response.msg);
+              }
+            })
+          }
+        })
+      },
+
+
     }
   }
 

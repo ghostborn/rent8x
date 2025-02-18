@@ -126,8 +126,40 @@
               this.$message.warning('两次输入的密码不一致');
             }
           }
-        })
+        });
+      },
 
+      queryHouse: function () {
+        axiosGet("{:url('house.property/queryPropertyAll')}").then(response => {
+          if (response.code == 1) {
+            this.houseList = response.data;
+            this.houseDef = 0;
+            for (let index = 0; index < this.houseList.length; index++) {
+              if (this.houseList[index].firstly == 'Y') {
+                this.houseDef = this.houseList[index].id;
+                this.houseName = this.houseList[index].name;
+                this.buttonDisabled = false;
+                break;
+              }
+            }
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        })
+      },
+
+      changeHouse: function (val) {
+        this.loading = true;
+        axiosPost("{:url('house.property/sort')}", {'id': val}).then(response => {
+          if (response.state == 'success') {
+            this.$message.success(response.msg)
+            location.reload();
+          } else {
+            this.$message({
+              message: response.msg, type: response.state
+            });
+          }
+        })
       },
 
 
@@ -148,6 +180,9 @@
     methods: Object.assign(common_f(), f()),
     mounted: function () {
       this.init();
+      this.queryHouse();
+      this.loading = false;
+
     }
   };
 
