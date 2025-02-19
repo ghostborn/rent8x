@@ -61,6 +61,8 @@ class Property
         }
         $data['admin_user_id'] = $admin_user_id;
         $data['firstly'] = 'Y';
+
+
         PropertyModel::where('admin_user_id', $admin_user_id)->update(['firstly' => 'N']);
         PropertyModel::create($data);
         return ['flag' => true, 'msg' => '添加成功'];
