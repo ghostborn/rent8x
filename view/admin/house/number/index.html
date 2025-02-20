@@ -69,9 +69,57 @@
       </t-space>
     </template>
   </t-table>
-
-
 </t-card>
+
+<!-- 新增房间 -->
+<t-dialog v-model:visible="dialogVisible" :header="formHeader" :width="680" :footer="false" top="5px">
+  <t-form ref="numberForm" :data="formData" :rules="rules" :label-width="100" @submit="handleSave">
+    <t-form-item label="房间名" name="name">
+      <t-input v-model="formData.name" :style="{ width: '480px' }" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="房租" name="rental">
+      <t-input-number theme="normal" v-model="formData.rental" :style="{ width: '480px' }" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="租期" name="lease_type">
+      <t-radio-group v-model="formData.lease_type">
+        <t-radio value="1">1个月</t-radio>
+        <t-radio value="2">2个月</t-radio>
+        <t-radio value="3">3个月</t-radio>
+        <t-radio value="6">6个月</t-radio>
+        <t-radio value="12">12个月</t-radio>
+      </t-radio-group>
+    </t-form-item>
+    <t-form-item label="押金" name="deposit">
+      <t-input-number theme="normal" v-model="formData.deposit" :style="{ width: '480px' }" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="管理费" name="management">
+      <t-input-number v-model="formData.management" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="网络费" name="network">
+      <t-input-number v-model="formData.network" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="卫生费" name="garbage_fee">
+      <t-input-number v-model="formData.garbage_fee" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="逾期日租金" name="daily_rent">
+      <t-input-number v-model="formData.daily_rent" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="水费单价" name="water_price">
+      <t-input-number v-model="formData.water_price" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="电费单价" name="electricity_price">
+      <t-input-number v-model="formData.electricity_price" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="设备" name="equipment">
+      <t-textarea v-model="formData.equipment" :style="{ width: '480px' }" placeholder="请输入" autosize/>
+    </t-form-item>
+    <t-form-item style="float: right">
+      <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px">取消</t-button>
+      <t-button theme="primary" type="submit">确定</t-button>
+    </t-form-item>
+  </t-form>
+</t-dialog>
 
 
 {/block} {block name="script"}
@@ -103,6 +151,33 @@
       {title: "操作", colKey: "op", width: 160, align: "left", fixed: "right"},
     ],
 
+    dialogVisible: false,
+    formData: {},
+    formHeader: "",
+
+    rules: {
+      quantity: [
+        {required: true, message: "必填", trigger: "blur"},
+        {min: 2, message: "最小值为2", type: "error", trigger: "blur"},
+        {max: 10, message: "最大值为10", type: "error", trigger: "blur"},
+      ],
+      name: [{required: true, message: "必填", trigger: "blur"}],
+      rental: [{required: true, message: "必填", trigger: "blur"}],
+      lease_type: [{required: true, message: "必填"}],
+      deposit: [{required: true, message: "必填", trigger: "blur"}],
+      management: [{required: true, message: "必填", trigger: "blur"}],
+      network: [{required: true, message: "必填", trigger: "blur"}],
+      garbage_fee: [{required: true, message: "必填", trigger: "blur"}],
+      daily_rent: [{required: true, message: "必填", trigger: "blur"}],
+      water_price: [{required: true, message: "必填", trigger: "blur"}],
+      electricity_price: [{required: true, message: "必填", trigger: "blur"}],
+      // 使用循环动态生成name0到name7的规则，若未来需要更多，只需调整循环次数
+      ...Array.from({length: 10}, (_, i) => ({
+        [`name${i}`]: [{required: true, message: "必填", trigger: "blur"}],
+      })).reduce((acc, curr) => ({...acc, ...curr}), {}),
+    },
+
+
   };
 
   function f() {
@@ -110,11 +185,82 @@
       init: function () {
         this.tableLoading = true;
 
-        axiosGet("{:url('getNumberMessage')}").then((response) => {
-
+        axiosGet("{:url('queryNumber')}", {parameter: this.searchValue}).then((response) => {
+          if (response.code == 1) {
+            this.tableData = response.data;
+            this.pagination.total = response.count;
+          } else {
+            this.$message.error("系统出错");
+          }
+          this.tableLoading = false;
         })
 
+        axiosGet("{:url('getNumberMessage')}").then((response) => {
+          if (response.code == 1) {
+            this.numberMessage = response.data;
+          } else {
+            console.log("getMessage error")
+          }
+        })
       },
+
+      //查询
+      handleSearch() {
+        this.init();
+      },
+
+
+      handleAdd() {
+        if (!this.houseDef) {
+          this.$message.warning("请先新增房产");
+        } else {
+          this.$refs.numberForm.reset();
+          this.formData = {
+            house_property_id: this.houseDef,
+            management: 0,
+            network: 0,
+            garbage_fee: 0,
+            lease_type: "1",
+          };
+          this.formHeader = this.houseName + " - 新增房间";
+          this.dialogVisible = true;
+          console.log(this.formData, 'this.formData')
+
+        }
+      },
+
+
+      // 删除
+      handleDelete(row) {
+        axiosPost("{:url('delete')}", row).then((response) => {
+          if (response.state == "success") {
+            this.$message.success(response.msg);
+            this.init();
+          } else if (response.state == "warning") {
+            this.$message.warning(response.msg);
+          } else {
+            this.$message.error(response.msg);
+          }
+        });
+      },
+
+      handleSave() {
+        this.$refs.numberForm.validate().then((valid) => {
+          if (valid == true) {
+            axiosPost("{:url('save')}", this.formData).then((response) => {
+              if (response.state == "success") {
+                this.$message.success(response.msg);
+                this.dialogVisible = false;
+                this.init();
+              } else if (response.state == "warning") {
+                this.$message.warning(response.msg);
+              } else {
+                this.$message.error(response.msg);
+              }
+            })
+          }
+        })
+      }
 
 
     };
