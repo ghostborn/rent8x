@@ -4,11 +4,15 @@ namespace app\admin\controller\house;
 
 use app\admin\controller\Common;
 
-use app\admin\library\Date;
 use app\admin\model\HouseNumber as NumberModel;
+
 use app\admin\model\AdminUser as UserModel;
+use app\common\house\Number as NumberAction;
 
 use app\admin\library\Property;
+use app\admin\library\Date;
+
+use think\facade\Db;
 use think\facade\View;
 
 class Number extends Common
@@ -88,8 +92,86 @@ class Number extends Common
             'electricity_price' => $this->request->post('electricity_price/f', 0.0),
             'equipment' => $this->request->post('equipment/s', '', 'trim'),
         ];
+        $result = NumberAction::save($id, $data);
+        if ($result['flag']) {
+            return $this->returnSuccess($result['msg']);
+        } else {
+            return $this->returnError($result['msg']);
+        }
+    }
 
+    // 批量保存
+    public function saveMore()
+    {
+        $numbdrData = $this->request->post();
+        // 开始事务
+        $transFlag = true;
+        Db::startTrans();
+        try {
+            foreach ($numbdrData as $item) {
+                if (NumberModel::where('name', $item['name'])
+                    ->where('house_property_id', $item['house_property_id'])
+                    ->find()
+                ) {
+                    throw new \Exception('该房间已存在,请勿重复添加');
+                }
+                $item['payment_time'] = date('Y-m-d');
+                NumberModel::create($item);
+            }
+            // 提交事务
+            Db::commit();
+        } catch (\Exception $e) {
+            $transFlag = false;
+            // 回滚事务
+            Db::rollback();
+            return $this->returnError($e->getMessage());
+        }
+        if ($transFlag) {
+            return $this->returnSuccess('新建成功');
+        }
+    }
 
+    public function delete()
+    {
+        $id = $this->request->param('id/d', null);
+        $result = NumberAction::delete($id);
+        if ($result['flag']) {
+            return $this->returnSuccess($result['msg']);
+        } else {
+            return $this->returnError($result['msg']);
+        }
+        if (!$number = NumberModel::find($id)) {
+            return $this->returnError('删除失败,房间不存在');
+        }
+    }
+
+    // 入住
+    public function checkin()
+    {
+        $data = [
+            'house_number_id' => $this->request->post('house_number_id/d', 0),
+            'checkin_time' => $this->request->post('checkin_time/s', '', 'trim'),
+        ];
+        $result = NumberAction::checkin($data);
+        if ($result['flag']) {
+            return $this->returnSuccess();
+        } else {
+            return $this->returnError($result['msg']);
+        }
+
+    }
+
+    //退房
+    public function checkout()
+    {
+        $number_id = $this->request->param('id/d', 0);
+        $leave_time = $this->request->param('leave_time/s', date('Y-m-d'), 'trim');
+        $result = NumberAction::checkout($number_id, $leave_time);
+        if ($result['flag']) {
+            return $this->returnSuccess($result['msg']);
+        } else {
+            return $this->returnError($result['msg']);
+        }
     }
 
 
