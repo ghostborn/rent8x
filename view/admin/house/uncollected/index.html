@@ -1,0 +1,415 @@
+{extend name="common/layout" /}
+{block name="main"}
+
+<t-card class="list-card-container" :bordered="false">
+  <div style="margin-bottom: 10px;">
+    <t-button theme="primary" style="margin-right: 10px;" @click="concentrated('E')">
+      集中抄电
+    </t-button>
+    <t-button theme="primary" style="margin-right: 10px;" @click="concentrated('W')">
+      集中抄水
+    </t-button>
+    <t-select placeholder="请选择抄表日期" clearable style="width: 150px;display: inline-block;" @change="changeDate">
+      <t-option
+        v-for="(item, index) in readingTimeArr"
+        :key="index"
+        :value="item.meter_reading_time"
+        :label="item.meter_reading_time"
+      >
+        {{ item.meter_reading_time }}
+      </t-option>
+    </t-select>
+    <span style="float: right;">
+      <t-button theme="primary" @click="handleFilter" style="margin-right: 10px;">
+        <template #icon><t-icon name="unfold-more"/></template> 明细账单
+      </t-button>
+      <t-button theme="primary" @click="handlePrintAll">
+        <template #icon><t-icon name="print"/></template> 打印列表
+      </t-button>
+    </span>
+  </div>
+
+  <t-table :data="tableData" :columns="columns" row-key="id" vertical-align="top" :bordered="true" size="small"
+           active-row-type="single" :hover="true" :pagination="pagination" :loading="tableLoading"
+           @sort-change="sortChange">
+    <template #op="slotProps">
+      <t-space>
+        <t-button size="small" @click="handleEdit(slotProps.row)">抄表</t-button>
+        <t-button size="small" v-if="slotProps.row.note != '延期'" theme="success"
+                  @click="handlePrint(slotProps.row)">收据
+        </t-button>
+        <t-popconfirm theme="danger" content="确认到账?" @confirm="handleAccount(slotProps.row)">
+          <t-button theme="warning" size="small">到账</t-button>
+        </t-popconfirm>
+        <t-popconfirm v-if="slotProps.row.end_time != null" theme="danger" content="确认延期?"
+                      @confirm="handleBalance(slotProps.row)">
+          <t-button theme="danger" size="small">延期</t-button>
+        </t-popconfirm>
+      </t-space>
+    </template>
+  </t-table>
+</t-card>
+
+<!-- 抄表FORM -->
+<t-dialog v-model:visible="dialogVisible" :header="formHeader" :width="680" :footer="false" top="5px">
+  <t-form ref="meterForm" :data="formData" :rules="rules" :label-width="100" @submit="handleSave">
+    <t-form-item label="上月电表度数" name="electricity_meter_last_month">
+      <t-input-number v-model="formData.electricity_meter_last_month" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="上月水表度数" name="water_meter_last_month">
+      <t-input-number v-model="formData.water_meter_last_month" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="抄表日期" name="meter_reading_time">
+      <t-date-picker v-model="formData.meter_reading_time" mode="date" :style="{ width: '480px' }" clearable/>
+    </t-form-item>
+    <t-form-item label="本月电表度数" name="electricity_meter_this_month">
+      <t-input-number v-model="formData.electricity_meter_this_month" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="本月水表度数" name="water_meter_this_month">
+      <t-input-number v-model="formData.water_meter_this_month" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="租金" name="rental">
+      <t-input-number v-model="formData.rental" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="押金" name="deposit">
+      <t-input-number v-model="formData.deposit" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="管理费" name="management">
+      <t-input-number v-model="formData.management" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="网络费" name="network">
+      <t-input-number v-model="formData.network" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="卫生费" name="garbage_fee">
+      <t-input-number v-model="formData.garbage_fee" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="其他费用" name="other_charges">
+      <t-input-number v-model="formData.other_charges" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="备注" name="note">
+      <t-textarea v-model="formData.note" :style="{ width: '480px' }" placeholder="请输入" autosize/>
+    </t-form-item>
+    <t-form-item style="float: right">
+      <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
+      <t-button theme="primary" type="submit">确定</t-button>
+    </t-form-item>
+  </t-form>
+</t-dialog>
+
+<!-- 收据页面 -->
+<t-dialog v-model:visible="receiptVisible" :width="630" :footer="false" :header="false" :close-Btn="false" top="50px">
+  <!-- 表单内容 -->
+  <div id="printJS-form333" class="setBorder">
+    <div class="setHeader">房 租 收 据 单</div>
+    <div class="container">
+      <div class="box">房间:{{ formData.property_name + '-' + formData.name }}</div>
+      <div class="box2" v-if="formData.end_time">租期:{{ formData.start_time + '至' + formData.end_time }}</div>
+      <div class="box2" v-else>退房日期:{{ formData.start_time}}</div>
+      <div class="box3">抄表日期:{{ formData.meter_reading_time }}</div>
+    </div>
+    <table class="setTable">
+      <tr>
+        <th class="setTh">表类</th>
+        <th class="setTh">表度数</th>
+        <th class="setTh">用量</th>
+        <th class="setTh">单价</th>
+        <th class="setTh">金额</th>
+      </tr>
+      <tr>
+        <td class="setTd">电费</td>
+        <td class="setTd">{{ formData.electricity_meter_this_month + '-' + formData.electricity_meter_last_month }}
+        </td>
+        <td class="setTd">{{ formData.electricity_consumption }}度</td>
+        <td class="setTd">{{ formData.electricity_price }}元/度</td>
+        <td class="setTd">{{ formData.electricity }}元</td>
+      </tr>
+      <tr>
+        <td class="setTd">水费</td>
+        <td class="setTd">{{ formData.water_meter_this_month + '-' + formData.water_meter_last_month }}</td>
+        <td class="setTd">{{ formData.water_consumption }}吨</td>
+        <td class="setTd">{{ formData.water_price }}元/吨</td>
+        <td class="setTd">{{ formData.water }}元</td>
+      </tr>
+    </table>
+    <div class="container">
+      <div class="box" v-if="titleItem[0]">{{titleItem[0].label}}:{{titleItem[0].value}}元</div>
+      <div class="box" v-else></div>
+      <div class="box" v-if="titleItem[1]">{{titleItem[1].label}}:{{titleItem[1].value}}元</div>
+      <div class="box" v-else></div>
+      <div class="box" v-if="titleItem[2]">{{titleItem[2].label}}:{{titleItem[2].value}}元</div>
+      <div class="box" v-else></div>
+    </div>
+    <div class="container" v-if="titleItem[3]">
+      <div class="box" v-if="titleItem[3]">{{titleItem[3].label}}:{{titleItem[3].value}}元</div>
+      <div class="box" v-else></div>
+      <div class="box" v-if="titleItem[4]">{{titleItem[4].label}}:{{titleItem[4].value}}元</div>
+      <div class="box" v-else></div>
+      <div class="box" v-if="titleItem[5]">{{titleItem[5].label}}:{{titleItem[5].value}}元</div>
+      <div class="box" v-else></div>
+    </div>
+    <div class="container">合计人民币(大写)：{{ formData.total_money2 }} (¥：{{ formData.total_money }} 元)</div>
+    <div class="container">备注：{{ formData.note }}</div>
+  </div>
+  <div style="float: right; padding: 8px;">
+    <t-popup placement="bottom">
+      <t-button style="margin-right: 10px;">历史水电</t-button>
+      <template #content>
+        <div style="width: 380px;">
+          <t-table :data="historyData" :columns="historyColumns" row-key="id" vertical-align="top" :bordered="true"
+                   size="small">
+          </t-table>
+        </div>
+      </template>
+    </t-popup>
+    <t-button @click="handlePrintReceipt">打印</t-button>
+  </div>
+</t-dialog>
+
+{/block}
+
+
+{block name="script"}
+<link rel="stylesheet" href="__STATIC__/css/receipt.css" type="text/css">
+
+<script>
+
+  const data = {
+    tableData: [],
+    tableLoading: false,
+    // 分页
+    pagination: {
+      defaultPageSize: 10,
+      total: 10,
+      defaultCurrent: 1,
+    },
+
+    // 排序
+    order: '',
+    field: '',
+    readingTimeArr: [],
+    readingTime: '',
+
+    // 抄表
+    dialogVisible: false,
+    formData: {},
+    formHeader: '',
+    rules: {
+      electricity_meter_last_month: [{required: true, message: '上月电表度数不能为空', trigger: 'blur'}],
+      water_meter_last_month: [{required: true, message: '上月水表度数不能为空', trigger: 'blur'}],
+      meter_reading_time: [{required: true, message: '抄表日期不能为空', trigger: 'blur'}],
+      electricity_meter_this_month: [{required: true, message: '本月电表度数不能为空', trigger: 'blur'}],
+      water_meter_this_month: [{required: true, message: '本月水表度数不能为空', trigger: 'blur'}],
+      rental: [
+        {required: true, message: '租金不能为空', trigger: 'blur'},
+        {min: 0, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+        {max: 99999999, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+      ],
+      deposit: [
+        {required: true, message: '押金不能为空', trigger: 'blur'},
+        {max: 99999999, message: '最大值为99999999', type: 'error', trigger: 'blur'},
+      ],
+      management: [
+        {required: true, message: '管理费不能为空', trigger: 'blur'},
+        {min: 0, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+        {max: 99999999, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+      ],
+      network: [
+        {required: true, message: '网络费不能为空', trigger: 'blur'},
+        {min: 0, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+        {max: 99999999, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+      ],
+      garbage_fee: [
+        {required: true, message: '卫生费不能为空', trigger: 'blur'},
+        {min: 0, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+        {max: 99999999, message: '输入字数应在0到99999999之间', type: 'error', trigger: 'blur'},
+      ],
+      other_charges: [
+        {required: true, message: '其他费用不能为空', trigger: 'blur'},
+        {max: 99999999, message: '最大值为99999999', type: 'error', trigger: 'blur'},
+      ],
+    },
+    // 收据
+    receiptVisible: false,
+    historyColumns: [
+      {title: '租期', colKey: 'start_time', width: 70,},
+      {title: '用电量', colKey: 'electricity_consumption', width: 50,},
+      {title: '用水量', colKey: 'water_consumption', width: 50},
+      {title: '备注', colKey: 'note', width: 100, ellipsis: true},
+    ],
+    historyData: [],
+
+
+    columns: [],
+    columns1: [
+      {title: '序号', colKey: 'serial-number', width: 30,},
+      {title: '房产名', colKey: 'property_name', width: 80,},
+      {title: '房间名', colKey: 'name', width: 80, sorter: true},
+      {title: '总金额', colKey: 'total_money', width: 80,},
+      {title: '收款日期', colKey: 'start_time', width: 80},
+      {title: '抄表日期', colKey: 'meter_reading_time', width: 80},
+      {title: '操作', colKey: 'op', width: 160, align: 'left'},
+    ],
+    columns2: [
+      {title: '序号', colKey: 'serial-number', width: 30,},
+      {title: '房产名', colKey: 'property_name', width: 80,},
+      {title: '房间名', colKey: 'name', width: 80, sorter: true},
+      {title: '电表度数', colKey: 'electricity_meter_this_month', width: 73},
+      {title: '用电量', colKey: 'electricity_consumption', width: 60},
+      {title: '电费', colKey: 'electricity', width: 60},
+      {title: '水表度数', colKey: 'water_meter_this_month', width: 73},
+      {title: '用水量', colKey: 'water_consumption', width: 60},
+      {title: '水费', colKey: 'water', width: 50},
+      {title: '租金', colKey: 'rental', width: 50},
+      {title: '押金', colKey: 'deposit', width: 50},
+      {title: '管理费', colKey: 'management', width: 59},
+      {title: '网络费', colKey: 'network', width: 59},
+      {title: '卫生费', colKey: 'garbage_fee', width: 59},
+      {title: '其他费用', colKey: 'other_charges', width: 75},
+      {title: '总金额', colKey: 'total_money', width: 59},
+      {title: '备注', colKey: 'note', width: 90, ellipsis: true},
+      {title: '收款日期', colKey: 'start_time', width: 80},
+    ],
+    titleItem: [],
+
+  }
+
+
+  function f() {
+    return {
+      init: function () {
+        this.columns = this.columns1;
+        this.queryTable();
+        this.queryReadingTime();
+      },
+      // 查询抄表日期
+      queryReadingTime: function () {
+        axiosGet("{:url('queryReadingTime')}").then(response => {
+          if (response.code == 1) {
+            this.readingTimeArr = response.data;
+          } else {
+            this.$message.error('系统出错了');
+          }
+        });
+      },
+      queryTable: function () {
+        this.tableLoading = true;
+        axiosGet("{:url('queryUncollected')}", {
+          'order': this.order,
+          'field': this.field,
+          'meter_reading_time': this.readingTime
+        }).then(response => {
+          if (response.code == 1) {
+            this.tableData = response.data;
+            this.pagination.total = response.count;
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+          this.tableLoading = false;
+        })
+      },
+      // 排序
+      sortChange: function (val) {
+        if (val) {
+          this.order = 'asc';
+          if (val.descending) {
+            this.order = 'desc';
+          }
+          this.field = val.sortBy;
+        } else {
+          this.order = '';
+          this.field = '';
+        }
+        this.queryTable();
+      },
+      // 切换抄表日期查询
+      changeDate(val) {
+        this.readingTime = val;
+        this.queryTable();
+      },
+      // 抄表
+      handleEdit(row) {
+        this.$refs.meterForm.reset();
+        this.formData = {...row};
+        if (this.formData.meter_reading_time == null) {
+          this.formData.meter_reading_time = getCurrentDateString();
+        }
+        this.formHeader = row.property_name + ' - ' + row.name;
+        this.dialogVisible = true;
+      },
+      // 保存抄表数据
+      handleSave() {
+        this.$refs.meterForm.validate().then((valid) => {
+          if (valid == true) {
+            axiosPost("{:url('save')}", this.formData).then(response => {
+              if (response.state == 'success') {
+                this.$message.success(response.msg);
+                this.dialogVisible = false;
+                this.queryTable();
+                this.queryReadingTime();
+              } else if (response.state == 'warning') {
+                this.$message.warning(response.msg);
+              } else {
+                this.$message.error(response.msg);
+              }
+            });
+          }
+        });
+      },
+
+      // 查看收据
+      handlePrint(row) {
+        this.receiptVisible = true;
+        this.formData = {...row};
+        this.titleItem = [];
+        if (row['rental']) this.titleItem.push({'label': '租金', 'value': row['rental']});
+        if (row['deposit']) this.titleItem.push({'label': '押金', 'value': row['deposit']});
+        if (row['management']) this.titleItem.push({'label': '管理费', 'value': row['management']});
+        if (row['network']) this.titleItem.push({'label': '网络费', 'value': row['network']});
+        if (row['garbage_fee']) this.titleItem.push({'label': '卫生费', 'value': row['garbage_fee']});
+        if (row['other_charges']) this.titleItem.push({'label': '其他费用', 'value': row['other_charges']});
+        axiosGet("{:url('queryHistory')}", {
+          number_id: row.house_number_id,
+          tenant_id: row.tenant_id
+        }).then(response => {
+          if (response.code == 1) {
+            this.historyData = response.data;
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+
+      // 收据打印
+      handlePrintReceipt() {
+        printJS({
+          printable: 'printJS-form333',
+          type: 'html',
+          css: '__STATIC__/css/receipt.css',
+        })
+      },
+
+      // 到账
+      handleAccount(row) {
+        axiosPost("{:url('account')}", {id: row.id}).then(response => {
+          if (response.state == 'success') {
+            this.$message.success(response.msg);
+            this.queryTable();
+            this.queryReadingTime();
+          } else if (response.state == 'warning') {
+            this.$message.warning(response.msg);
+          } else {
+            this.$message.error(response.msg);
+          }
+        });
+      },
+
+
+    }
+
+  }
+</script>
+{/block}
