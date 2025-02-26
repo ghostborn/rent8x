@@ -2,13 +2,16 @@
 
 namespace app\admin\controller\house;
 
+use app\admin\controller\Common;
+
+
+use app\admin\model\HouseNumber as NumberModel;
 use app\admin\model\HouseBilling as BillingModel;
 use app\common\house\Uncollected as UncollectedAction;
 
-use app\admin\controller\Common;
 use app\admin\library\Property;
-
-
+use app\admin\library\Date;
+use think\facade\Db;
 use think\facade\View;
 
 class Uncollected extends Common
@@ -115,6 +118,18 @@ class Uncollected extends Common
         }
     }
 
+    //到账-common
+    public function account()
+    {
+        $id = $this->request->param('id/d', 0);
+        $result = UncollectedAction::account($id, $this->auth->getLoginUser()['id']);
+        if ($result['flag']) {
+            return $this->returnSuccess($result['msg']);
+        } else {
+            return $this->returnError($result['msg']);
+        }
+    }
+
     //收据页面-查询历史水电
     public function queryHistory()
     {
@@ -138,8 +153,110 @@ class Uncollected extends Common
             $value['start_time'] = \substr($value['start_time'], 0, 10);
         }
         return $this->returnResult($billing_data, $limit);
+    }
 
+    public function balance()
+    {
+        $id = $this->request->param('id/d', 0);
+        if (!$billing_data = BillingModel::find($id)) {
+            return $this->returnError('记录不存在。');
+        }
+        // 新增延期账单
+        $data_debit = [
+            'house_property_id' => $billing_data['house_property_id'],
+            'house_number_id' => $billing_data['house_number_id'],
+            'start_time' => $billing_data['start_time'],
+            'other_charges' => $billing_data['total_money'],
+            'total_money' => $billing_data['total_money'],
+            'note' => '延期',
+        ];
+        $transFlag = true;
+        Db::startTrans();
+        try {
+            $number_data = NumberModel::find($billing_data->house_number_id);
+            $billing_update['accounting_date'] = date('Y-m-d', time());
+            $billing_update['total_money'] = 0;
+            $billing_update['note'] = '延期';
 
+            $dates = Date::getLease($number_data->checkin_time, $number_data->lease, $number_data->lease_type);
+            $billing_insert = [
+                'house_property_id' => $billing_data['house_property_id'],
+                'house_number_id' => $billing_data['house_number_id'],
+                'start_time' => $dates[0],
+                'end_time' => $dates[1],
+                'tenant_id' => $number_data['tenant_id'],
+                'rental' => $number_data['rental'] * $number_data['lease_type'],
+                'management' => $number_data['management'] * $number_data['lease_type'],
+                'network' => $number_data['network'] * $number_data['lease_type'],
+                'garbage_fee' => $number_data['garbage_fee'] * $number_data['lease_type'],
+                'electricity_meter_last_month' => $billing_data['electricity_meter_this_month'],
+                'water_meter_last_month' => $billing_data['water_meter_this_month'],
+                'total_money' => ($number_data['rental'] + $number_data['management'] + $number_data['network'] + $number_data['garbage_fee']) * $number_data['lease_type'],
+            ];
+            // 新增下一个账单
+            $new_billing = BillingModel::create($billing_insert);
+            $number_update['payment_time'] = $billing_insert['start_time'];
+            $number_update['receipt_number'] = $new_billing['id'];
+            $number_update['lease'] = $number_data['lease'] + $number_data['lease_type'];
+
+            // 更新房间信息
+            $number_data->save($number_update);
+            // 更新旧账单
+            $billing_data->save($billing_update);
+            // 新增延期账单
+            BillingModel::create($data_debit);
+            // 提交事务
+            Db::commit();
+
+        } catch (\Exception $e) {
+            $transFlag = false;
+            Db::rollback();
+        }
+        if ($transFlag) {
+            return $this->returnSuccess('操作成功');
+        } else {
+            return $this->returnError('操作失败');
+        }
+    }
+
+    public function centralized()
+    {
+        $type = $this->request->param('type/s');
+        $house_property_id = Property::getProperty();
+        $conditions = array(
+            ['a.house_property_id', 'in', $house_property_id],
+            ['a.start_time', '< time', 'today+10 days'],
+            ['a.accounting_date', 'null', ''],
+            ['a.end_time', 'not null', ''],
+            ['a.electricity_meter_last_month', 'not null', ''],
+            ['a.water_meter_last_month', 'not null', ''],
+        );
+        if ($type == TYPE_ELECTRICITY) {
+            array_push($conditions, ['a.electricity_meter_this_month', 'null', '']);
+        } elseif ($type == TYPE_WATER) {
+            array_push($conditions, ['a.water_meter_this_month', 'null', '']);
+        }
+        $data = BillingModel::where($conditions)
+            ->alias('a')
+            ->join('HouseNumber b', 'b.house_property_id = a.house_property_id and b.id = a.house_number_id')
+            ->join('HouseProperty c', 'c.id = a.house_property_id')
+            ->field('a.*, b.name as number_name, c.name as property_name')
+            ->order('b.name')
+            ->select();
+        return $this->returnResult($data);
+    }
+
+    //保存集中抄表
+    public function saveCentralized()
+    {
+        $data = $this->request->post('data');
+        $type = $this->request->post('type/s', 0);
+        $result = UncollectedAction::saveCentralized($data, $type);
+        if ($result['flag']) {
+            return $this->returnSuccess($result['msg']);
+        } else {
+            return $this->returnError($result['msg']);
+        }
     }
 
 

@@ -8,6 +8,16 @@ use think\facade\Session;
 use think\facade\View;
 use Firebase\JWT\JWT;
 
+//每页显示的条数
+const LAYUI_PAGE = 1;
+const LAYUI_LIMIT = 10;
+
+// WeMeter水电表类型
+//类型-电费
+define('TYPE_ELECTRICITY', 'E');
+//类型-水费
+define('TYPE_WATER', 'W');
+
 // billSum类型
 //类型-收入
 define('TYPE_INCOME', 'I');

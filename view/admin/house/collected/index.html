@@ -1,0 +1,145 @@
+{extend name="common/layout" /}
+{block name="main"}
+<t-card class="list-card-container" :bordered="false">
+  <div style="display: flex; align-items: center; margin-bottom: 10px;">
+    <div style="display: flex; align-items: center; width: 280px; ">
+      <div style="flex-grow: 1; margin-right: 5px;">
+        <t-input v-model="searchValue" placeholder="请输入房产、房间" clearable @enter="handleSearch"/>
+      </div>
+      <t-button theme="primary" @click="handleSearch">
+        <template #icon>
+          <t-icon name="search"/>
+        </template>
+      </t-button>
+    </div>
+    <div style="flex-grow: 1; text-align: center;">
+      今日到账总金额：{{sum}} 元
+    </div>
+    <div style="margin-left: auto;">
+      <t-button theme="primary" @click="handleFilter">
+        <template #icon>
+          <t-icon name="unfold-more"/>
+        </template>
+        明细账单
+      </t-button>
+    </div>
+  </div>
+
+  <t-table :data="tableData" :columns="columns" row-key="id" vertical-align="top" :bordered="true" size="small"
+           active-row-type="single" :hover="true" :loading="tableLoading" :pagination="pagination"
+           @page-change="onPageChange">
+  </t-table>
+</t-card>
+{/block}
+
+{block name="script"}
+<script>
+  const data = {
+    tableData: [],
+    tableLoading: false,
+    cloumnsFlag: false,
+    columns: [],
+    columns1: [
+      {title: '房产名', colKey: 'property_name', width: 90, fixed: 'left'},
+      {title: '房间名', colKey: 'number_name', width: 60, fixed: 'left'},
+      {title: '租期', colKey: 'lease', width: 190, fixed: 'left'},
+      {title: '电费', colKey: 'electricity', width: 50},
+      {title: '水费', colKey: 'water', width: 50},
+      {title: '租金', colKey: 'rental', width: 50},
+      {title: '押金', colKey: 'deposit', width: 50},
+      {title: '管理费', colKey: 'management', width: 60},
+      {title: '网络费', colKey: 'network', width: 59},
+      {title: '卫生费', colKey: 'garbage_fee', width: 60},
+      {title: '其他费用', colKey: 'other_charges', width: 75},
+      {title: '总金额', colKey: 'total_money', width: 80},
+      {title: '到账日期', colKey: 'accounting_date', width: 100, fixed: 'right'},
+    ],
+    columns2: [
+      {title: '房产名', colKey: 'property_name', width: 87, fixed: 'left'},
+      {title: '房间名', colKey: 'number_name', width: 80, fixed: 'left'},
+      {title: '租期', colKey: 'lease', width: 110, fixed: 'left', ellipsis: true},
+      {title: '电表度数', colKey: 'electricity_meter_this_month', width: 73},
+      {title: '用电量', colKey: 'electricity_consumption', width: 60},
+      {title: '电费', colKey: 'electricity', width: 60},
+      {title: '水表度数', colKey: 'water_meter_this_month', width: 73},
+      {title: '用水量', colKey: 'water_consumption', width: 60},
+      {title: '水费', colKey: 'water', width: 50},
+      {title: '租金', colKey: 'rental', width: 50},
+      {title: '押金', colKey: 'deposit', width: 50},
+      {title: '管理费', colKey: 'management', width: 59},
+      {title: '网络费', colKey: 'network', width: 59},
+      {title: '卫生费', colKey: 'garbage_fee', width: 59},
+      {title: '其他费用', colKey: 'other_charges', width: 75},
+      {title: '总金额', colKey: 'total_money', width: 59},
+      {title: '备注', colKey: 'note', width: 90, ellipsis: true},
+      {title: '到账日期', colKey: 'accounting_date', width: 95, fixed: 'right'},
+    ],
+    sum: 0,
+    house_number_id: '',
+    // 搜索框
+    searchValue: '',
+    // 分页
+    pagination: {
+      defaultPageSize: 10,
+      total: 10,
+      defaultCurrent: 1,
+      pageSize: 10,
+      // current: 1,
+    },
+  };
+
+  function f() {
+    return {
+      init: function () {
+        this.columns = this.columns1;
+        this.queryTable();
+        axiosGet("{:url('sum')}").then(response => {
+          if (response.code == 1) {
+            this.sum = response.msg;
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+      queryTable: function () {
+        this.tableLoading = true;
+        let params = {
+          'parameter': this.searchValue,
+          'limit': this.pagination.pageSize,
+          'page': this.pagination.current
+        };
+        axiosGet("{:url('queryCollected')}", params).then(response => {
+          if (response.code == 1) {
+            this.tableData = response.data;
+            this.pagination.total = response.count;
+            this.pagination.current = 1;
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+          this.tableLoading = false;
+        });
+      },
+      onPageChange: function (pageInfo) {
+        this.pagination.current = pageInfo.current;
+        this.pagination.pageSize = pageInfo.pageSize;
+        this.queryTable();
+      },
+      handleFilter: function () {
+        if (this.cloumnsFlag) {
+          this.isCollapse = false;
+          this.columns = this.columns1;
+        } else {
+          this.isCollapse = true;
+          this.columns = this.columns2;
+        }
+        this.cloumnsFlag = !this.cloumnsFlag;
+      },
+      // 搜索
+      handleSearch() {
+        this.queryTable();
+      },
+    }
+  }
+</script>
+
+{/block}

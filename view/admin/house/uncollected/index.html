@@ -169,6 +169,73 @@
   </div>
 </t-dialog>
 
+<!-- 打印table -->
+<t-dialog :visible="false" :width="630" :footer="false" :header="false" :close-Btn="false" top="50px">
+  <div id="printTable">
+    <table>
+      <tr>
+        <th>序号</th>
+        <th>房产名</th>
+        <th>房间名</th>
+        <th>电表度数</th>
+        <th>用电量</th>
+        <th>电费</th>
+        <th>水表度数</th>
+        <th>用水量</th>
+        <th>水费</th>
+        <th>房租</th>
+        <th>押金</th>
+        <th>管理费</th>
+        <th>网络费</th>
+        <th>卫生费</th>
+        <th>其他费用</th>
+        <th>总金额</th>
+        <th>收款日期</th>
+      </tr>
+      <tr v-for="(item, index) in tableData" :key="item.id">
+        <td>{{ index + 1 }}</td>
+        <td>{{ item.property_name }}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.electricity_meter_this_month }}</td>
+        <td>{{ item.electricity_consumption }}</td>
+        <td>{{ item.electricity }}</td>
+        <td>{{ item.water_meter_this_month }}</td>
+        <td>{{ item.water_consumption }}</td>
+        <td>{{ item.water }}</td>
+        <td>{{ item.rental }}</td>
+        <td>{{ item.deposit }}</td>
+        <td>{{ item.management }}</td>
+        <td>{{ item.network }}</td>
+        <td>{{ item.garbage_fee }}</td>
+        <td>{{ item.other_charges }}</td>
+        <td>{{ item.total_money }}</td>
+        <td>{{ item.start_time }}</td>
+      </tr>
+    </table>
+  </div>
+</t-dialog>
+
+<!-- 集中抄表 -->
+<t-dialog v-model:visible="concentratedVisible" :header="formHeader" :width="680" :footer="false" top="5px">
+  <t-form ref="concentratedForm" :label-width="150" @submit="concentratedSave">
+    <t-form-item v-if="concentratedType == 'E'" v-for="(domain, index) in concentratedData" :key="domain.id"
+                 :label="domain.property_name + '-' + domain.number_name + '-'+ domain.electricity_meter_last_month">
+      <t-input-number v-model="domain.electricity_meter_this_month" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item v-if="concentratedType == 'W'" v-for="(domain, index) in concentratedData" :key="domain.id"
+                 :label="domain.property_name + '-' + domain.number_name + '-'+ domain.water_meter_last_month">
+      <t-input-number v-model="domain.water_meter_this_month" :style="{ width: '480px' }" theme="normal"
+                      placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item style="float: right;margin-top: 50px">
+      <t-button variant="outline" @click="concentratedVisible = false" style="margin-right: 5px;">取消</t-button>
+      <t-button theme="primary" type="submit">确定</t-button>
+    </t-form-item>
+  </t-form>
+</t-dialog>
+
+
 {/block}
 
 
@@ -242,7 +309,13 @@
     ],
     historyData: [],
 
+    // 集中抄表
+    concentratedVisible: false,
+    concentratedData: [],
+    concentratedType: '',
 
+    // 明细账单
+    cloumnsFlag: false,
     columns: [],
     columns1: [
       {title: '序号', colKey: 'serial-number', width: 30,},
@@ -407,9 +480,95 @@
         });
       },
 
+      // 打印table
+      handlePrintAll() {
+        printJS({
+          printable: 'printTable',
+          type: 'html',
+          header: '打印时间：' + new Date().toLocaleDateString(),
+          headerStyle: 'font-weight: 100; font-size: 12px;',
+          css: '__STATIC__/css/table.css',
+        })
+      },
+
+      // 延期
+      handleBalance(row) {
+        axiosPost("{:url('balance')}", {id: row.id}).then(response => {
+          if (response.state == 'success') {
+            this.$message.success(response.msg);
+            this.queryTable();
+          } else if (response.state == 'warning') {
+            this.$message.warning(response.msg);
+          } else {
+            this.$message.error(response.msg);
+          }
+        });
+      },
+
+      // 明细账单
+      handleFilter: function () {
+        if (this.cloumnsFlag) {
+          this.isCollapse = false;
+          this.columns = this.columns1;
+        } else {
+          this.isCollapse = true;
+          this.columns = this.columns2;
+        }
+        this.cloumnsFlag = !this.cloumnsFlag;
+      },
+
+
+      // 集中抄表
+      concentrated(val) {
+        if (val == 'E') {
+          this.formHeader = '集中抄电 （房产-房号-上期表度数）';
+        } else if (val == 'W') {
+          this.formHeader = '集中抄水 （房产-房号-上期表度数）';
+        }
+        this.concentratedType = val
+        this.concentratedVisible = true
+        axiosGet("{:url('centralized')}", {type: val}).then(response => {
+          if (response.code == 1) {
+            this.concentratedData = response.data;
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+
+      // 集中抄表保存
+      concentratedSave() {
+        let postData = []
+        if (this.concentratedType == 'E') {
+          this.concentratedData.forEach(element => {
+            if (element.electricity_meter_this_month) {
+              postData.push({id: element.id, value: element.electricity_meter_this_month});
+            }
+          });
+        } else if (this.concentratedType == 'W') {
+          this.concentratedData.forEach(element => {
+            if (element.water_meter_this_month) {
+              postData.push({id: element.id, value: element.water_meter_this_month});
+            }
+          });
+        }
+        axiosPost("{:url('saveCentralized')}", {data: postData, type: this.concentratedType})
+          .then(response => {
+            if (response.state == 'success') {
+              this.$message.success(response.msg);
+              this.concentratedVisible = false;
+              this.queryTable();
+              this.queryReadingTime();
+            } else if (response.state == 'warning') {
+              this.$message.warning(response.msg);
+            } else {
+              this.$message.error(response.msg);
+            }
+          });
+      },
+
 
     }
-
   }
 </script>
 {/block}

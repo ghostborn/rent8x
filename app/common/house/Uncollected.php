@@ -4,6 +4,9 @@ namespace app\common\house;
 
 use app\admin\model\HouseNumber as NumberModel;
 use app\admin\model\HouseBilling as BillingModel;
+use app\admin\model\BillSum as SumModel;
+use app\admin\model\WeMeter as MeterModel;
+use app\admin\model\WeDetail as WeDetailModel;
 
 use app\admin\library\Date;
 use think\facade\Db;
@@ -74,7 +77,59 @@ class Uncollected
                 ];
                 $number_data->save($number_update);
             }
-
+            //总表记录
+            $accounting_month = \date('Y-m', time());
+            $sum_data = SumModel::where([
+                'house_property_id' => $oldBill->house_property_id,
+                'type' => TYPE_INCOME,
+                'accounting_date' => $accounting_month,
+            ])->find();
+            if ($sum_data) {
+                $sum_data->save(['amount' => $sum_data->amount + $oldBill['total_money']]);
+            } else {
+                SumModel::create([
+                    'admin_user_id' => $admin_user_id,
+                    'house_property_id' => $oldBill->house_property_id,
+                    'amount' => $oldBill->total_money,
+                    'type' => TYPE_INCOME,
+                    'accounting_date' => $accounting_month,
+                    'annual' => date('Y'),
+                ]);
+            }
+            // 新增水电表记录
+            if ($oldBill->electricity) {
+                $electricity = MeterModel::where('house_property_id', $oldBill->house_property_id)
+                    ->where('type', TYPE_ELECTRICITY)
+                    ->whereFindInSet('house_number_id', $oldBill->house_number_id)
+                    ->find();
+                if ($electricity) {
+                    WeDetailModel::create([
+                        'meter_id' => $electricity->id,
+                        'house_property_id' => $oldBill->house_property_id,
+                        'amount' => $oldBill->electricity,
+                        'dosage' => $oldBill->electricity_consumption,
+                        'type' => TYPE_ELECTRICITY,
+                        'calculate_date' => date("Y-m-d", strtotime("-1 month", strtotime($oldBill->start_time)))
+                    ]);
+                }
+            }
+            if ($oldBill->water) {
+                $water = MeterModel::where('house_property_id', $oldBill->house_property_id)
+                    ->where('type', TYPE_WATER)
+                    ->whereFindInSet('house_number_id', $oldBill->house_number_id)
+                    ->find();
+                if ($water) {
+                    WeDetailModel::create([
+                        'meter_id' => $water->id,
+                        'house_property_id' => $oldBill->house_property_id,
+                        'amount' => $oldBill->water,
+                        'dosage' => $oldBill->water_consumption,
+                        'type' => TYPE_WATER,
+                        'calculate_date' => date("Y-m-d", strtotime("-1 month", strtotime($oldBill->start_time)))
+                    ]);
+                }
+            }
+            Db::commit();
         } catch (\Exception $e) {
             $transFlag = false;
             Db::rollback();
@@ -84,9 +139,39 @@ class Uncollected
         if ($transFlag) {
             return ['flag' => true, 'msg' => '到账成功'];
         }
-
-
     }
 
-
+    public static function saveCentralized($data, $type)
+    {
+        foreach ($data as $value) {
+            if (count($value) > 0) {
+                if (!$billing = BillingModel::find($value['id'])) {
+                    return ['flag' => false, 'msg' => '修改失败，账单不存在'];
+                }
+                $number_data = NumberModel::where('house_property_id', $billing->house_property_id)
+                    ->where('id', $billing->house_number_id)
+                    ->find();
+                $data = array();
+                $data['meter_reading_time'] = date('Y-m-d', time());
+                if ($type == TYPE_ELECTRICITY) {
+                    $data['electricity_meter_this_month'] = $value['value'];
+                    $data['electricity_consumption'] = $value['value'] - $billing['electricity_meter_last_month'];
+                    $data['electricity'] = $data['electricity_consumption'] * $number_data->electricity_price;
+                    $data['total_money'] = round($billing['water'] + $data['electricity'] + $billing['rental']
+                        + $billing['deposit'] + $billing['other_charges'] + $billing['management'] + $billing['network'] + $billing['garbage_fee'],
+                        2);
+                    $billing->save($data);
+                } elseif ($type == TYPE_WATER) {
+                    $data['water_meter_this_month'] = $value['value'];
+                    $data['water_consumption'] = $value['value'] - $billing['water_meter_last_month'];
+                    $data['water'] = $data['water_consumption'] * $number_data->water_price;
+                    $data['total_money'] = round($data['water'] + $billing['electricity'] + $billing['rental']
+                        + $billing['deposit'] + $billing['other_charges'] + $billing['management'] + $billing['network'] + $billing['garbage_fee'],
+                        2);
+                    $billing->save($data);
+                }
+            }
+        }
+        return ['flag' => true, 'msg' => '修改成功'];
+    }
 }
