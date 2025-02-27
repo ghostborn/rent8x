@@ -30,7 +30,9 @@ class Collected extends Common
         if ($parameter) {
             $conditions[] = function ($query) use ($parameter) {
                 $query->where('b.name', 'like', "%{$parameter}%")
-                    ->whereOr('c.name', 'like', "%{$parameter}%");
+                    ->whereOr('c.name', 'like', "%{$parameter}%")
+                    ->whereOr('a.accounting_date', 'like', "%{$parameter}%");
+
             };
         };
         $count = BillingModel::alias('a')

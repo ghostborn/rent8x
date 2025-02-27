@@ -195,7 +195,6 @@
           if (response.code == 1) {
             this.cardData = response.data;
             this.cardData.pending_amount = this.pending_amount;
-            console.log(this.cardData, 'r22')
           } else {
             this.$message.error('系统出错了!!!');
           }

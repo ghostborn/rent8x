@@ -180,6 +180,7 @@
         });
       },
       changePhoto(res) {
+        console.log(res, 'res')
         this.queryPhoto();
         let code = res.response[0].code;
         if (code == 1) {

@@ -2,9 +2,9 @@
 {block name="main"}
 <t-card class="list-card-container" :bordered="false">
   <div style="display: flex; align-items: center; margin-bottom: 10px;">
-    <div style="display: flex; align-items: center; width: 280px; ">
+    <div style="display: flex; align-items: center; width: 380px; ">
       <div style="flex-grow: 1; margin-right: 5px;">
-        <t-input v-model="searchValue" placeholder="请输入房产、房间" clearable @enter="handleSearch"/>
+        <t-input v-model="searchValue" placeholder="请输入房产、房间、到账日期（如：2025-02）" clearable @enter="handleSearch"/>
       </div>
       <t-button theme="primary" @click="handleSearch">
         <template #icon>
