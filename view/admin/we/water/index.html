@@ -1,0 +1,212 @@
+{extend name="common/layout" /}
+{block name="main"}
+<t-card class="list-card-container" :bordered="false">
+  <div style="margin-bottom: 10px;">
+    <t-button theme="primary" style="margin-right: 10px;" @click="handleAdd" :disabled="insertButton">
+      <template #icon>
+        <t-icon name="add"/>
+      </template>
+      新建
+    </t-button>
+    <t-select v-model="meter_id" placeholder="请选择水表" clearable style="width: 150px;display: inline-block;"
+              @change="meterChange">
+      <t-option v-for="(item, index) in meterData" :key="index" :value="item.id" :label="item.name">
+        {{ item.name }}
+      </t-option>
+    </t-select>
+  </div>
+  <t-table :data="tableData" :columns="columns" row-key="id" vertical-align="top" :bordered="true" size="small"
+           active-row-type="single" :hover="true" :loading="tableLoading" :pagination="pagination">
+    <template #op="slotProps">
+      <t-space>
+        <t-button v-if="slotProps.row.accounting_date == null" size="small"
+                  @click="handleEdit(slotProps.row)">修改
+        </t-button>
+        <t-popconfirm v-if="slotProps.row.accounting_date == null" theme="danger" content="确认到账?"
+                      @confirm="handleAccount(slotProps.row)">
+          <t-button theme="warning" size="small">到账</t-button>
+        </t-popconfirm>
+      </t-space>
+    </template>
+  </t-table>
+</t-card>
+
+<!-- 新增FORM -->
+<t-dialog v-model:visible="dialogVisible" :header="formHeader" :width="680" :footer="false">
+  <t-form ref="waterForm" :data="formData" :rules="rules" :label-width="100" @submit="handleSave">
+    <t-form-item label="计费周期" name="cycle">
+      <t-date-range-picker v-model="formData.cycle" clearable format="YYYY-MM-DD" :style="{ width: '480px' }"
+                           :disable-date="{ before: disableDate }"/>
+    </t-form-item>
+    <t-form-item label="总用量" name="master_dosage">
+      <t-input-number v-model="formData.master_dosage" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item label="总金额" name="master_sum">
+      <t-input-number v-model="formData.master_sum" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
+    </t-form-item>
+    <t-form-item style="float: right">
+      <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
+      <t-button theme="primary" type="submit">确定</t-button>
+    </t-form-item>
+  </t-form>
+</t-dialog>
+{/block}
+
+{block name="script"}
+<script>
+  const data = {
+    tableData: [],
+    tableLoading: false,
+    columns: [
+      {title: '表名', colKey: 'electricity_name', width: 120},
+      {title: '开始日期', colKey: 'start_month', width: 120},
+      {title: '结束日期', colKey: 'end_month', width: 120},
+      {title: '总表金额', colKey: 'master_sum', width: 80},
+      {title: '分表金额', colKey: 'detail_sum', width: 80},
+      {title: '差额(总表-分表)', colKey: 'difference_sum', width: 80},
+      {title: '总表用量', colKey: 'master_dosage', width: 80},
+      {title: '分表用量', colKey: 'detail_dosage', width: 80},
+      {title: '差量(总表-分表)', colKey: 'difference_dosage', width: 80},
+      {title: '操作', colKey: 'op', width: 160, align: 'left', fixed: 'right',},
+    ],
+    // 分页
+    pagination: {
+      defaultPageSize: 13,
+      pageSizeOptions: [13, 20],
+      total: 10,
+      defaultCurrent: 1,
+      current: 1,
+    },
+    // 电表选项
+    meterData: [],
+    meter_id: '',
+    dialogVisible: false,
+    formData: {'cycle': []},
+    formHeader: '',
+    rules: {
+      cycle: [{
+        validator: (val) => {
+          if (val.length !== 2) {
+            return {result: false, message: '必填', type: 'error'};
+          } else if (!val[0]) {
+            return {result: false, message: '请选择开始日期', type: 'error'};
+          } else if (!val[1]) {
+            return {result: false, message: '请选择结束日期', type: 'error'};
+          }
+          return {result: true};
+        }
+      }],
+      master_dosage: [{required: true, message: '必填'}],
+      master_sum: [{required: true, message: '必填'}],
+    },
+    // 新增按钮
+    insertButton: true,
+    disableDate: '2024-01-01',
+  };
+
+  function f() {
+    return {
+      init: function () {
+        axiosGet("{:url('we.meter/queryMeterId')}", {'type': 'W'}).then(response => {
+          if (response.code == 1) {
+            this.meterData = response.data;
+            if (response.data.length > 0) {
+              this.meter_id = response.data[0].id;
+            }
+            this.queryTable();
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+      queryTable: function () {
+        axiosGet("{:url('queryWater')}", {'meter_id': this.meter_id}).then(response => {
+          if (response.code == 1) {
+            this.tableData = response.data;
+            this.pagination.total = response.count;
+            if (this.tableData.length == 0 && this.meter_id) {
+              this.insertButton = false;
+            } else {
+              this.insertButton = true;
+            }
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+      handleAdd() {
+        this.disableDate = '2024-01-01';
+        this.$refs.waterForm.reset();
+        this.formData = {'meter_id': this.meter_id, 'house_property_id': this.houseDef, 'cycle': []};
+        this.formHeader = this.houseName + '水表 - 新增水费';
+        ;
+        this.dialogVisible = true;
+      },
+      handleSave() {
+        this.$refs.waterForm.validate().then((valid) => {
+          if (valid == true) {
+            if (this.formData.cycle[0] && this.formData.cycle[1]) {
+              this.formData.start_month = this.formData.cycle[0];
+              this.formData.end_month = this.formData.cycle[1];
+              axiosPost("{:url('save')}", this.formData).then(response => {
+                if (response.state == 'success') {
+                  this.$message.success(response.msg);
+                  this.dialogVisible = false;
+                  this.queryTable();
+                } else if (response.state == 'warning') {
+                  this.$message.warning(response.msg);
+                } else {
+                  this.$message.error(response.msg);
+                }
+              });
+            }
+          }
+        });
+      },
+      meterChange(val) {
+        this.meter_id = val;
+        this.queryTable();
+      },
+
+      handleEdit(row) {
+        if (row.start_month) {
+          // 将字符串转换为 Date 对象
+          let startDate = new Date(row.start_month);
+          // 检查转换是否成功
+          if (isNaN(startDate.getTime())) {
+            console.error('Invalid date string:', row.start_month);
+            this.disableDate = '2024-01-01';
+          } else {
+            // 日期减一天
+            startDate.setDate(startDate.getDate() - 1);
+            // 转换为 YYYY-MM-DD 格式的字符串
+            let year = startDate.getFullYear();
+            let month = (startDate.getMonth() + 1).toString().padStart(2, '0'); // 月份从0开始，需要加1并补零
+            let day = startDate.getDate().toString().padStart(2, '0');
+            this.disableDate = `${year}-${month}-${day}`;
+          }
+        } else {
+          this.disableDate = '2024-01-01';
+        }
+        this.$refs.waterForm.reset();
+        this.formData = {...row};
+        this.formData.cycle = [row.start_month, row.end_month ? row.end_month : ''];
+        this.formHeader = '修改总水费';
+        this.dialogVisible = true;
+      },
+      handleAccount(row) {
+        axiosPost("{:url('account')}", {id: row.id}).then(response => {
+          if (response.state == 'success') {
+            this.$message.success(response.msg);
+            this.queryTable();
+          } else if (response.state == 'warning') {
+            this.$message.warning(response.msg);
+          } else {
+            this.$message.error(response.msg);
+          }
+        });
+      },
+    }
+  }
+</script>
+{/block}

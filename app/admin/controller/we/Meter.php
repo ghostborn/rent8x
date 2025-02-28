@@ -47,6 +47,49 @@ class Meter extends Common
     public function save()
     {
         $id = $this->request->post('id/d', 0);
+        $data = [
+            'house_property_id' => $this->request->post('house_property_id/s', null, 'trim'),
+            'property_name' => $this->request->post('property_name/s', null, 'trim'),
+            'type' => $this->request->post('type/s', null, 'trim'),
+            'name' => $this->request->post('name/s', null, 'trim'),
+            'house_number_id' => $this->request->post('house_number_id/s', null, 'trim'),
+        ];
+        if ($id) {
+            if (!$meter = MeterModel::find($id)) {
+                return $this->returnError('修改失败，记录不存在。');
+            }
+            $meter->save($data);
+            return $this->returnSuccess('修改成功');
+        }
+        MeterModel::create($data);
+        return $this->returnSuccess('添加成功');
+    }
+
+    public function delete()
+    {
+        $id = $this->request->post('id/d', 0);
+        if (!$meter = MeterModel::find($id)) {
+            return $this->returnError('删除失败，记录不存在。');
+        }
+        $transFlag = true;
+        Db::startTrans();
+        try {
+            $meter->delete();
+            WeDetailModel::where('meter_id', $id)->delete();
+            WeBillModel::where('meter_id', $id)->delete();
+            // 提交事务
+            Db::commit();
+        } catch (\Exception $e) {
+            $transFlag = false;
+            // 回滚事务
+            Db::rollback();
+            return $this->returnError($e->getMessage());
+        }
+        if ($transFlag) {
+            return $this->returnSuccess('删除成功。');
+        }
+
+
     }
 
 
