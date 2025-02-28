@@ -158,7 +158,6 @@ class Number extends Common
         } else {
             return $this->returnError($result['msg']);
         }
-
     }
 
     //退房
@@ -171,6 +170,22 @@ class Number extends Common
             return $this->returnSuccess($result['msg']);
         } else {
             return $this->returnError($result['msg']);
+        }
+    }
+
+    //其他页面查询numberId-全部房产时，不可用
+    public function queryNumberId()
+    {
+        $house_property_id = Property::getProperty();
+        if (count($house_property_id) > 1) {
+            return $this->returnResult();
+        } else {
+            $number = NumberModel::where('house_property_id', 'in', $house_property_id)
+                ->order('name')
+                ->field('id as value, name as label')
+                ->select()
+                ->toArray();
+            return $this->returnResult($number);
         }
     }
 
