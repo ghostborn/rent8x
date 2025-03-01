@@ -1,0 +1,53 @@
+{extend name="common/layout" /}
+{block name="main"}
+<t-card class="list-card-container" :bordered="false">
+  <t-button theme="primary" style="margin-bottom: 10px;" @click="handleArrange">
+    整理数据
+  </t-button>
+  <t-table :data="tableData" :columns="columns" row-key="id" vertical-align="top" :bordered="true" size="small"
+           active-row-type="single" :hover="true" :loading="tableLoading">
+  </t-table>
+</t-card>
+{/block}
+
+{block name="script"}
+<script>
+  const data = {
+    tableData: [],
+    tableLoading: false,
+    columns: [
+      {title: '房产名', colKey: 'property_name', width: 100, align: 'left', fixed: 'left',},
+      {title: '年份', colKey: 'annual', width: 160},
+      {title: '利润', colKey: 'profit', width: 160},
+      {title: '收入', colKey: 'income', width: 160},
+      {title: '支出', colKey: 'expenditure', width: 100},
+    ],
+  };
+
+  function f() {
+    return {
+      init: function () {
+        this.tableLoading = true;
+        axiosGet("{:url('query')}").then(response => {
+          if (response.code == 1) {
+            this.tableData = response.data;
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+          this.tableLoading = false;
+        });
+      },
+      handleArrange() {
+        axiosGet("{:url('arrange')}").then(response => {
+          if (response.code == 1) {
+            this.$message.success(response.msg);
+            this.init();
+          } else {
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+    }
+  }
+</script>
+{/block}
