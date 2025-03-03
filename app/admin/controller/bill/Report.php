@@ -54,7 +54,65 @@ class Report extends Common
 
     public function echar()
     {
+        $house_property_id = Property::getProperty();
+        $currentDate = new \DateTime();
+        $currentDate->modify('first day of this month');
+        $charData = array();
+        for ($i = 12; $i >= 0; $i--) {
+            $month = clone $currentDate;
+            $accounting_month = $month->modify("--{$i} month")->format('Y-m');
+            $income = SumModel::where('house_property_id', 'in', $house_property_id)
+                ->where('accounting_date', $accounting_month)
+                ->where('type', TYPE_INCOME)
+                ->sum('amount');
+            $spending = SumModel::where('house_property_id', 'in', $house_property_id)
+                ->where('accounting_date', $accounting_month)
+                ->where('type', TYPE_EXPENDITURE)
+                ->sum('amount');
+            \array_push($charData, ['month' => $accounting_month, 'project' => '收入', 'money' => $income]);
+            \array_push($charData, ['month' => $accounting_month, 'project' => '支出', 'money' => round($spending, 2)]);
+            \array_push($charData,
+                ['month' => $accounting_month, 'project' => '利润', 'money' => round($income - $spending, 2)]);
+        }
+        return $this->returnResult($charData);
+    }
 
+    public function expenditure()
+    {
+        $house_property_id = Property::getProperty();
+        if (count($house_property_id) > 1) {
+            return $this->returnResult();
+        } else {
+            $first_day_of_month = date('Y-m-01');
+            $last_day_of_month = date('Y-m-t');
+
+            $other_total = OtherModel::where('house_property_id', 'in', $house_property_id)
+                ->whereTime('accounting_date', 'between', [$first_day_of_month, $last_day_of_month])
+                ->where('accout_mark', 'Y')
+                ->sum('total_money');
+
+            $water_total = WeBillModel::alias('a')
+                ->join('we_meter b', 'a.meter_id = b.id and a.house_property_id = b.house_property_id')
+                ->where('a.house_property_id', 'in', $house_property_id)
+                ->whereTime('a.accounting_date', 'between', [$first_day_of_month, $last_day_of_month])
+                ->where('b.type', TYPE_WATER)
+                ->sum('a.master_sum');
+
+            $electricity_total = WeBillModel::alias('a')
+                ->join('we_meter b', 'a.meter_id = b.id and a.house_property_id=b.house_property_id')
+                ->where('a.house_property_id', 'in', $house_property_id)
+                ->whereTime('a.accounting_date', 'between', [$first_day_of_month, $last_day_of_month])
+                ->where('b.type', TYPE_ELECTRICITY)
+                ->sum('a.master_sum');
+
+            $sum = $other_total + $water_total + $electricity_total;
+            $result = [
+                ['item' => '其他费用', 'percent' => $sum ? round(($other_total / $sum), 2) : 0],
+                ['item' => '水费', 'percent' => $sum ? round(($water_total / $sum), 2) : 0],
+                ['item' => '电费', 'percent' => $sum ? round(($electricity_total / $sum), 2) : 0]
+            ];
+            return $this->returnResult($result);
+        }
     }
 
 
