@@ -9,8 +9,9 @@ use think\facade\View;
 use Firebase\JWT\JWT;
 
 //每页显示的条数
-const LAYUI_PAGE = 1;
-const LAYUI_LIMIT = 10;
+define('LAYUI_PAGE',1);
+//每页条数的选择项
+define('LAYUI_LIMIT',10);
 
 // WeMeter水电表类型
 //类型-电费

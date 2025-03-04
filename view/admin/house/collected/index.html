@@ -16,11 +16,14 @@
       今日到账总金额：{{sum}} 元
     </div>
     <div style="margin-left: auto;">
-      <t-button theme="primary" @click="handleFilter">
+      <t-button theme="primary" @click="handleFilter" style="margin-right: 10px">
         <template #icon>
           <t-icon name="unfold-more"/>
         </template>
         明细账单
+      </t-button>
+      <t-button theme="primary" @click="handleExport">
+        <template #icon><t-icon name="file-export" /></template> 导出列表
       </t-button>
     </div>
   </div>
@@ -138,6 +141,15 @@
       handleSearch() {
         this.queryTable();
       },
+      // 导出excel
+      handleExport() {
+        let params = {
+          'parameter': this.searchValue,
+          'limit': this.pagination.pageSize,
+          'page': this.pagination.current
+        };
+        axiosDownload("{:url('export')}",params);
+      }
     }
   }
 </script>

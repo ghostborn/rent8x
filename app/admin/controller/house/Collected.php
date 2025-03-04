@@ -5,9 +5,8 @@ namespace app\admin\controller\house;
 use app\admin\controller\Common;
 use app\admin\library\Property;
 use app\admin\model\HouseBilling as BillingModel;
+
 use think\facade\View;
-use const app\admin\controller\LAYUI_LIMIT;
-use const app\admin\controller\LAYUI_PAGE;
 
 class Collected extends Common
 {
@@ -61,7 +60,6 @@ class Collected extends Common
         return $this->returnResult($billing, $count);
     }
 
-
     public function sum()
     {
         $house_property_id = Property::getProperty();
@@ -70,4 +68,12 @@ class Collected extends Common
             ->sum('total_money');
         return $this->returnResult([], 1, round($sum, 2));
     }
+
+    public function export()
+    {
+
+    }
+
+
+
 }
