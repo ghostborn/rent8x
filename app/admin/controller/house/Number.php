@@ -189,5 +189,50 @@ class Number extends Common
         }
     }
 
+    // 未收账单页面-查询已租房间
+    public function queryRentedNumber()
+    {
+        $house_property_id = Property::getProperty();
+        if (count($house_property_id) > 1) {
+            return $this->returnResult();
+        } else {
+            $number = NumberModel::where('rent_mark', 'Y')
+                ->where('house_property_id', 'in', $house_property_id)
+                ->order('name')
+                ->field('id as value,name as label')
+                ->select()
+                ->toArray();
+            return $this->returnResult($number);
+        }
+    }
+
+    // 批量入住
+    public function queryUnleasedNumber()
+    {
+        $house_property_id = Property::getProperty();
+        if (count($house_property_id) > 1) {
+            return $this->returnResult();
+        } else {
+            $number = NumberModel::where('rent_mark', 'N')
+                ->where('house_property_id', 'in', $house_property_id)
+                ->order('name')
+                ->field('id, name, checkin_time')
+                ->select()
+                ->toArray();
+            return $this->returnResult($number);
+        }
+    }
+
+    public function checkInMoreSave()
+    {
+        $data = $this->request->post();
+        foreach ($data as $item) {
+            if (!empty($item['checkin_time'])) {
+                NumberAction::checkin(['house_number_id' => $item['id'], 'checkin_time' => $item['checkin_time']]);
+            }
+        }
+        return $this->returnSuccess('批量入住成功');
+    }
+
 
 }

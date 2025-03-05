@@ -72,7 +72,7 @@ class Uncollected extends Common
             ->alias('a')
             ->join('HouseNumber b', 'b.house_property_id = a.house_property_id and b.id = a.house_number_id')
             ->join('HouseProperty c', 'c.id = a.house_property_id')
-            ->field('a.*, b.name, b.water_price, b.electricity_price, c.name as property_name')
+            ->field('a.*, b.name, b.water_price, b.electricity_price, b.receipt_number, c.name as property_name')
             ->order($field, $order)
             ->select();
         foreach ($datas as $value) {
@@ -98,6 +98,8 @@ class Uncollected extends Common
             'house_property_id' => $this->request->post('house_property_id/d', 0),
             'house_number_id' => $this->request->post('house_number_id/d', 0),
             'meter_reading_time' => $this->request->post('meter_reading_time/s', '', 'trim'),
+            'start_time' => $this->request->post('start_time/s', '', 'trim'),
+            'end_time' => $this->request->post('end_time/s', '', 'trim'),
             'electricity_meter_this_month' => $this->request->post('electricity_meter_this_month/d', 0),
             'water_meter_this_month' => $this->request->post('water_meter_this_month/d', 0),
             'electricity_meter_last_month' => $this->request->post('electricity_meter_last_month/d', 0),

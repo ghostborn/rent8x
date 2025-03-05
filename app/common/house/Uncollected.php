@@ -7,7 +7,6 @@ use app\admin\model\HouseBilling as BillingModel;
 use app\admin\model\BillSum as SumModel;
 use app\admin\model\WeMeter as MeterModel;
 use app\admin\model\WeDetail as WeDetailModel;
-
 use app\admin\library\Date;
 use think\facade\Db;
 
@@ -16,19 +15,34 @@ class Uncollected
     public static function save($id, $data)
     {
         if (!$billing_data = BillingModel::find($id)) {
-            return ['flag' => false, 'msg' => '修改失败,账单不存在'];
+            // 新增账单
+            $number_data = NumberModel::where('house_property_id', $data['house_property_id'])
+                ->where('id', $data['house_number_id'])
+                ->find();
+            $data['electricity_consumption'] = $data['electricity_meter_this_month'] - $data['electricity_meter_last_month'];
+            $data['electricity'] = $data['electricity_consumption'] * $number_data->electricity_price;
+            $data['water_consumption'] = $data['water_meter_this_month'] - $data['water_meter_last_month'];
+            $data['water'] = $data['water_consumption'] * $number_data->water_price;
+            $data['total_money'] = round($data['water'] + $data['electricity'] + $data['rental'] + $data['deposit']
+                + $data['management'] + $data['network'] + $data['garbage_fee'] + $data['other_charges'], 2);
+            BillingModel::create($data);
+            return ['flag' => true, 'msg' => '添加成功'];
+        } else {
+            if (isset($data['end_time'])) {
+                unset($data['end_time']);
+            }
+            $number_data = NumberModel::where('house_property_id', $billing_data->house_property_id)
+                ->where('id', $billing_data->house_number_id)
+                ->find();
+            $data['electricity_consumption'] = $data['electricity_meter_this_month'] - $data['electricity_meter_last_month'];
+            $data['electricity'] = $data['electricity_consumption'] * $number_data->electricity_price;
+            $data['water_consumption'] = $data['water_meter_this_month'] - $data['water_meter_last_month'];
+            $data['water'] = $data['water_consumption'] * $number_data->water_price;
+            $data['total_money'] = round($data['water'] + $data['electricity'] + $data['rental'] + $data['deposit']
+                + $data['management'] + $data['network'] + $data['garbage_fee'] + $data['other_charges'], 2);
+            $billing_data->save($data);
+            return ['flag' => true, 'msg' => '修改成功'];
         }
-        $number_data = NumberModel::where('house_property_id', $billing_data->house_property_id)
-            ->where('id', $billing_data->house_number_id)
-            ->find();
-        $data['electricity_consumption'] = $data['electricity_meter_this_month'] - $data['electricity_meter_last_month'];
-        $data['electricity'] = $data['electricity_consumption'] * $number_data->electricity_price;
-        $data['water_consumption'] = $data['water_meter_this_month'] - $data['water_meter_last_month'];
-        $data['water'] = $data['water_consumption'] * $number_data->water_price;
-        $data['total_money'] = round($data['water'] + $data['electricity'] + $data['rental'] + $data['deposit']
-            + $data['management'] + $data['network'] + $data['garbage_fee'] + $data['other_charges'], 2);
-        $billing_data->save($data);
-        return ['flag' => true, 'msg' => '修改成功'];
     }
 
     //到账
@@ -45,7 +59,7 @@ class Uncollected
             if ($number_data->rent_mark === 'Y') {
                 $billing_update['accounting_date'] = date('Y-m-d', time());
                 $billing_data->save($billing_update);
-                if ($billing_data->end_time) {
+                if ($billing_data->end_time && $billing_data->id == $number_data->receipt_number) {
                     $dates = Date::getLease($number_data->checkin_time, $number_data->lease, $number_data->lease_type);
                     $billing_insert = [
                         'house_property_id' => $billing_data['house_property_id'],
@@ -78,14 +92,16 @@ class Uncollected
                 $number_data->save($number_update);
             }
             //总表记录
-            $accounting_month = \date('Y-m', time());
+            $accounting_month = date('Y-m', time());
             $sum_data = SumModel::where([
                 'house_property_id' => $oldBill->house_property_id,
                 'type' => TYPE_INCOME,
                 'accounting_date' => $accounting_month,
             ])->find();
             if ($sum_data) {
-                $sum_data->save(['amount' => $sum_data->amount + $oldBill['total_money']]);
+                $sum_data->save([
+                    'amount' => $sum_data->amount + $oldBill['total_money'],
+                ]);
             } else {
                 SumModel::create([
                     'admin_user_id' => $admin_user_id,
@@ -129,6 +145,7 @@ class Uncollected
                     ]);
                 }
             }
+            // 提交事务
             Db::commit();
         } catch (\Exception $e) {
             $transFlag = false;

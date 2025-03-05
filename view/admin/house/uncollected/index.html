@@ -1,8 +1,10 @@
 {extend name="common/layout" /}
 {block name="main"}
-
 <t-card class="list-card-container" :bordered="false">
   <div style="margin-bottom: 10px;">
+    <t-button theme="primary" style="margin-right: 10px;" :disabled="buttonDisabled" @click="addBill()">
+      新增账单
+    </t-button>
     <t-button theme="primary" style="margin-right: 10px;" @click="concentrated('E')">
       集中抄电
     </t-button>
@@ -10,12 +12,8 @@
       集中抄水
     </t-button>
     <t-select placeholder="请选择抄表日期" clearable style="width: 150px;display: inline-block;" @change="changeDate">
-      <t-option
-        v-for="(item, index) in readingTimeArr"
-        :key="index"
-        :value="item.meter_reading_time"
-        :label="item.meter_reading_time"
-      >
+      <t-option v-for="(item, index) in readingTimeArr" :key="index" :value="item.meter_reading_time"
+                :label="item.meter_reading_time">
         {{ item.meter_reading_time }}
       </t-option>
     </t-select>
@@ -53,6 +51,20 @@
 <!-- 抄表FORM -->
 <t-dialog v-model:visible="dialogVisible" :header="formHeader" :width="680" :footer="false" top="5px">
   <t-form ref="meterForm" :data="formData" :rules="rules" :label-width="100" @submit="handleSave">
+    <t-form-item label="房间名" name="house_number_id" v-if="isNew">
+      <t-select v-model="formData.house_number_id" class="demo-select-base" :style="{ width: '480px' }" clearable
+                filterable>
+        <t-option v-for="(item, index) in numberArr" :key="index" :value="item.value" :label="item.label">
+          {{ item.label }}
+        </t-option>
+      </t-select>
+    </t-form-item>
+    <t-form-item label="开始日期" name="start_time" v-if="isNew">
+      <t-date-picker v-model="formData.start_time" mode="date" :style="{ width: '480px' }" clearable/>
+    </t-form-item>
+    <t-form-item label="结束日期" name="end_time" v-if="isNew">
+      <t-date-picker v-model="formData.end_time" mode="date" :style="{ width: '480px' }" clearable/>
+    </t-form-item>
     <t-form-item label="上月电表度数" name="electricity_meter_last_month">
       <t-input-number v-model="formData.electricity_meter_last_month" :style="{ width: '480px' }" theme="normal"
                       placeholder="请输入"/>
@@ -105,7 +117,7 @@
   <!-- 表单内容 -->
   <div id="printJS-form333" class="setBorder">
     <div class="setHeader">房 租 收 据 单</div>
-    <div class="container">
+    <div class="title">
       <div class="box">房间:{{ formData.property_name + '-' + formData.name }}</div>
       <div class="box2" v-if="formData.end_time">租期:{{ formData.start_time + '至' + formData.end_time }}</div>
       <div class="box2" v-else>退房日期:{{ formData.start_time}}</div>
@@ -228,22 +240,17 @@
       <t-input-number v-model="domain.water_meter_this_month" :style="{ width: '480px' }" theme="normal"
                       placeholder="请输入"/>
     </t-form-item>
-    <t-form-item style="float: right;margin-top: 50px">
+    <t-form-item style="float: right">
       <t-button variant="outline" @click="concentratedVisible = false" style="margin-right: 5px;">取消</t-button>
       <t-button theme="primary" type="submit">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
-
-
 {/block}
-
 
 {block name="script"}
 <link rel="stylesheet" href="__STATIC__/css/receipt.css" type="text/css">
-
 <script>
-
   const data = {
     tableData: [],
     tableLoading: false,
@@ -253,18 +260,19 @@
       total: 10,
       defaultCurrent: 1,
     },
-
     // 排序
     order: '',
     field: '',
     readingTimeArr: [],
     readingTime: '',
-
     // 抄表
     dialogVisible: false,
     formData: {},
     formHeader: '',
     rules: {
+      house_number_id: [{required: true, message: '房间名不能为空', trigger: 'change'}],
+      start_time: [{required: true, message: '开始日期不能为空', trigger: 'change'}],
+      end_time: [{required: true, message: '结束日期不能为空', trigger: 'change'}],
       electricity_meter_last_month: [{required: true, message: '上月电表度数不能为空', trigger: 'blur'}],
       water_meter_last_month: [{required: true, message: '上月水表度数不能为空', trigger: 'blur'}],
       meter_reading_time: [{required: true, message: '抄表日期不能为空', trigger: 'blur'}],
@@ -308,13 +316,11 @@
       {title: '备注', colKey: 'note', width: 100, ellipsis: true},
     ],
     historyData: [],
-
     // 集中抄表
     concentratedVisible: false,
     concentratedData: [],
     concentratedType: '',
-
-    // 明细账单
+    // 明显账单
     cloumnsFlag: false,
     columns: [],
     columns1: [
@@ -347,9 +353,10 @@
       {title: '收款日期', colKey: 'start_time', width: 80},
     ],
     titleItem: [],
-
+    // 新增账单
+    isNew: false,
+    numberArr: [],
   }
-
 
   function f() {
     return {
@@ -357,6 +364,7 @@
         this.columns = this.columns1;
         this.queryTable();
         this.queryReadingTime();
+        this.queryNumber();
       },
       // 查询抄表日期
       queryReadingTime: function () {
@@ -364,7 +372,16 @@
           if (response.code == 1) {
             this.readingTimeArr = response.data;
           } else {
-            this.$message.error('系统出错了');
+            this.$message.error('系统出错了!!!');
+          }
+        });
+      },
+      queryNumber: function () {
+        axiosGet("{:url('house.number/queryRentedNumber')}").then(response => {
+          if (response.code == 1) {
+            this.numberArr = response.data;
+          } else {
+            this.$message.error('系统出错了!!!');
           }
         });
       },
@@ -374,15 +391,16 @@
           'order': this.order,
           'field': this.field,
           'meter_reading_time': this.readingTime
-        }).then(response => {
-          if (response.code == 1) {
-            this.tableData = response.data;
-            this.pagination.total = response.count;
-          } else {
-            this.$message.error('系统出错了!!!');
-          }
-          this.tableLoading = false;
         })
+          .then(response => {
+            if (response.code == 1) {
+              this.tableData = response.data;
+              this.pagination.total = response.count;
+            } else {
+              this.$message.error('系统出错了!!!');
+            }
+            this.tableLoading = false;
+          });
       },
       // 排序
       sortChange: function (val) {
@@ -403,10 +421,22 @@
         this.readingTime = val;
         this.queryTable();
       },
+      // 新增账单
+      addBill: function () {
+        this.isNew = true;
+        this.$refs.meterForm.reset();
+        this.formData = {
+          house_property_id: this.houseDef,
+          meter_reading_time: getCurrentDateString(),
+        };
+        this.formHeader = this.houseName + ' - 新增账单';
+        this.dialogVisible = true;
+      },
       // 抄表
       handleEdit(row) {
         this.$refs.meterForm.reset();
         this.formData = {...row};
+        this.isNew = this.formData.id !== this.formData.receipt_number;
         if (this.formData.meter_reading_time == null) {
           this.formData.meter_reading_time = getCurrentDateString();
         }
@@ -432,7 +462,6 @@
           }
         });
       },
-
       // 查看收据
       handlePrint(row) {
         this.receiptVisible = true;
@@ -455,16 +484,14 @@
           }
         });
       },
-
       // 收据打印
       handlePrintReceipt() {
         printJS({
           printable: 'printJS-form333',
           type: 'html',
-          css: '__STATIC__/css/receipt.css',
+          css: '__STATIC__/css/receipt_print.css',
         })
       },
-
       // 到账
       handleAccount(row) {
         axiosPost("{:url('account')}", {id: row.id}).then(response => {
@@ -479,7 +506,6 @@
           }
         });
       },
-
       // 打印table
       handlePrintAll() {
         printJS({
@@ -490,7 +516,6 @@
           css: '__STATIC__/css/table.css',
         })
       },
-
       // 延期
       handleBalance(row) {
         axiosPost("{:url('balance')}", {id: row.id}).then(response => {
@@ -504,20 +529,6 @@
           }
         });
       },
-
-      // 明细账单
-      handleFilter: function () {
-        if (this.cloumnsFlag) {
-          this.isCollapse = false;
-          this.columns = this.columns1;
-        } else {
-          this.isCollapse = true;
-          this.columns = this.columns2;
-        }
-        this.cloumnsFlag = !this.cloumnsFlag;
-      },
-
-
       // 集中抄表
       concentrated(val) {
         if (val == 'E') {
@@ -535,7 +546,6 @@
           }
         });
       },
-
       // 集中抄表保存
       concentratedSave() {
         let postData = []
@@ -566,8 +576,17 @@
             }
           });
       },
-
-
+      // 明细账单
+      handleFilter: function () {
+        if (this.cloumnsFlag) {
+          this.isCollapse = false;
+          this.columns = this.columns1;
+        } else {
+          this.isCollapse = true;
+          this.columns = this.columns2;
+        }
+        this.cloumnsFlag = !this.cloumnsFlag;
+      },
     }
   }
 </script>
