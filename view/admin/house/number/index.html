@@ -50,8 +50,8 @@
         <t-button size="small" theme="warning" v-if="slotProps.row.rent_mark === 'Y'"
                   @click="handleCheckOut(slotProps.row)">退房
         </t-button>
-        <t-popconfirm theme="danger" content="确认删除?" @confirm="handleDelete(slotProps.row)">
-          <t-button theme="danger" size="small">删除</t-button>
+        <t-popconfirm theme="danger" content="确认删除?" @confirm="handleDelete(slotProps.row)" :disabled="loading">
+          <t-button theme="danger" size="small" :disabled="loading">删除</t-button>
         </t-popconfirm>
       </t-space>
     </template>
@@ -103,7 +103,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -168,7 +168,7 @@
 
     <t-form-item style="float: right">
       <t-button variant="outline" @click="handleBack" style="margin-right: 5px">上一步</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -187,7 +187,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="checkInVisible = false" style="margin-right: 5px">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -206,7 +206,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="checkOutVisible = false" style="margin-right: 5px">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -219,7 +219,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="checkInMoreVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -303,6 +303,8 @@
     // 批量入住
     checkInMoreVisible: false,
     unleasedArray: [],
+    // 加载状态
+    loading: false,
   };
 
   function f() {
@@ -384,18 +386,24 @@
         this.checkInMoreVisible = true;
       },
       checkInMoreSave() {
-        axiosPost("{:url('checkInMoreSave')}", this.unleasedArray)
-          .then(response => {
-            if (response.state == 'success') {
-              this.$message.success(response.msg);
-              this.init();
-              this.checkInMoreVisible = false;
-            } else if (response.state == 'warning') {
-              this.$message.warning(response.msg);
-            } else {
-              this.$message.error(response.msg);
-            }
-          });
+        if (!this.unleasedArray.length) {
+          this.checkInMoreVisible = false;
+          return;
+        }
+        this.loading = true;
+        axiosPost("{:url('checkInMoreSave')}", this.unleasedArray).then(response => {
+          if (response.state == 'success') {
+            this.$message.success(response.msg);
+            this.init();
+            this.checkInMoreVisible = false;
+          } else if (response.state == 'warning') {
+            this.$message.warning(response.msg);
+          } else {
+            this.$message.error(response.msg);
+          }
+        }).finally(() => {
+          this.loading = false;
+        })
       },
       // 修改
       handleEdit(row) {
@@ -406,6 +414,7 @@
       },
       // 保存
       handleSave() {
+        this.loading = true;
         this.$refs.numberForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('save')}", this.formData).then((response) => {
@@ -418,7 +427,11 @@
               } else {
                 this.$message.error(response.msg);
               }
+            }).finally(() => {
+              this.loading = false;
             });
+          } else {
+            this.loading = false;
           }
         });
       },
@@ -439,6 +452,7 @@
       },
       // 批量新增-保存
       handleSaveMore() {
+        this.loading = true;
         this.$refs.addMoreForm2.validate().then((valid) => {
           if (valid == true) {
             let sendData = [];
@@ -457,12 +471,17 @@
               } else {
                 this.$message.error(response.msg);
               }
-            });
+            }).finally(() => {
+              this.loading = false;
+            })
+          } else {
+            this.loading = false;
           }
         });
       },
       // 删除
       handleDelete(row) {
+        if (this.loading) return;
         axiosPost("{:url('delete')}", row).then((response) => {
           if (response.state == "success") {
             this.$message.success(response.msg);
@@ -472,7 +491,9 @@
           } else {
             this.$message.error(response.msg);
           }
-        });
+        }).finally(() => {
+          this.loading = false;
+        })
       },
       // 入住
       handleCheckIn(row) {
@@ -486,6 +507,7 @@
         };
       },
       checkIn() {
+        this.loading = true;
         this.$refs.checkInForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('checkin')}", this.formData).then((response) => {
@@ -499,7 +521,11 @@
               } else {
                 this.$message.error(response.msg);
               }
-            });
+            }).finally(() => {
+              this.loading = false;
+            })
+          } else {
+            this.loading = false;
           }
         });
       },
@@ -516,6 +542,7 @@
         };
       },
       checkOut() {
+        this.loading = true;
         this.$refs.checkOutForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('checkout')}", this.formData).then((response) => {
@@ -528,7 +555,11 @@
               } else {
                 this.$message.error(response.msg);
               }
-            });
+            }).finally(()=>{
+              this.loading = false;
+            })
+          }else{
+            this.loading = false;
           }
         });
       },

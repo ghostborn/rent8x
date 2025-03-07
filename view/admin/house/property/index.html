@@ -14,8 +14,8 @@
     <template #op="slotProps">
       <t-space>
         <t-button size="small" @click="handleEdit(slotProps.row)">修改</t-button>
-        <t-popconfirm theme="danger" content="确认删除?" @confirm="handleDelete(slotProps.row)">
-          <t-button theme="danger" size="small">删除</t-button>
+        <t-popconfirm theme="danger" content="确认删除?" @confirm="handleDelete(slotProps.row)" :disabled="loading">
+          <t-button theme="danger" size="small" :disabled="loading">删除</t-button>
         </t-popconfirm>
       </t-space>
     </template>
@@ -42,14 +42,13 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <!-- 添加 :loading 绑定 -->
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
 
-
 {/block}
-
 
 {block name="script"}
 <script>
@@ -72,6 +71,7 @@
       phone: [{telnumber: true, message: '请输入正确的手机号码', trigger: 'blur'}],
       id_card: [{idcard: true, message: '请输入正确的身份证号码', trigger: 'blur'}],
     },
+    loading: false, // 新增删除操作的 loading 状态
   };
 
   function f() {
@@ -86,7 +86,6 @@
           }
           this.tableLoading = false;
         })
-
       },
 
       handleAdd() {
@@ -107,6 +106,7 @@
         if (this.tableData.length == 1) {
           this.$message.warning('不能删除全部房产');
         } else {
+          if(this.loading) return; //如果正在删除，直接返回
           axiosPost("{:url('delete')}", row).then(response => {
             if (response.state == 'success') {
               this.$message.success(response.msg);
@@ -116,11 +116,13 @@
             } else {
               this.$message.error(response.msg);
             }
+            this.loading = false; // 删除操作完成，恢复状态
           })
         }
       },
 
       handleSave() {
+        this.loading = true; // 设置为正在保存
         this.$refs.propertyForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('save')}", this.formData).then(response => {
@@ -133,15 +135,15 @@
               } else {
                 this.$message.error(response.msg);
               }
+              this.loading = false; // 保存操作完成，恢复状态
             })
+          }else{
+            this.loading = false; // 验证失败，恢复状态
           }
         })
       },
-
-
     }
   }
-
 
 </script>
 
