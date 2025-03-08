@@ -62,7 +62,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -111,6 +111,7 @@
     selectId: 0,
     // 搜索框
     searchValue: '',
+    loading: false,
   };
 
   function f() {
@@ -137,6 +138,7 @@
         this.dialogVisible = true;
       },
       handleSave() {
+        this.loading = true;
         this.$refs.tenantForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('save')}", this.formData).then(response => {
@@ -149,7 +151,11 @@
               } else {
                 this.$message.error(response.msg);
               }
+            }).finally(() => {
+              this.loading = false;
             });
+          } else {
+            this.loading = false;
           }
         });
       },
@@ -180,7 +186,6 @@
         });
       },
       changePhoto(res) {
-        console.log(res, 'res')
         this.queryPhoto();
         let code = res.response[0].code;
         if (code == 1) {

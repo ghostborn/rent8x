@@ -36,11 +36,11 @@
         <t-button size="small" v-if="slotProps.row.note != '延期'" theme="success"
                   @click="handlePrint(slotProps.row)">收据
         </t-button>
-        <t-popconfirm theme="danger" content="确认到账?" @confirm="handleAccount(slotProps.row)">
+        <t-popconfirm theme="danger" content="确认到账?" @confirm="handleAccount(slotProps.row)" :disabled="loading">
           <t-button theme="warning" size="small">到账</t-button>
         </t-popconfirm>
         <t-popconfirm v-if="slotProps.row.end_time != null" theme="danger" content="确认延期?"
-                      @confirm="handleBalance(slotProps.row)">
+                      @confirm="handleBalance(slotProps.row)" :disabled="loading">
           <t-button theme="danger" size="small">延期</t-button>
         </t-popconfirm>
       </t-space>
@@ -107,7 +107,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -242,7 +242,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="concentratedVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -356,6 +356,8 @@
     // 新增账单
     isNew: false,
     numberArr: [],
+    // 加载状态
+    loading: false,
   }
 
   function f() {
@@ -445,6 +447,7 @@
       },
       // 保存抄表数据
       handleSave() {
+        this.loading = true;
         this.$refs.meterForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('save')}", this.formData).then(response => {
@@ -458,7 +461,11 @@
               } else {
                 this.$message.error(response.msg);
               }
+            }).finally(() => {
+              this.loading = false;
             });
+          } else {
+            this.loading = false;
           }
         });
       },
@@ -494,6 +501,8 @@
       },
       // 到账
       handleAccount(row) {
+        if (this.loading) return;
+        this.loading = true;
         axiosPost("{:url('account')}", {id: row.id}).then(response => {
           if (response.state == 'success') {
             this.$message.success(response.msg);
@@ -504,6 +513,8 @@
           } else {
             this.$message.error(response.msg);
           }
+        }).finally(() => {
+          this.loading = false;
         });
       },
       // 打印table
@@ -518,6 +529,8 @@
       },
       // 延期
       handleBalance(row) {
+        if (this.loading) return;
+        this.loading = true;
         axiosPost("{:url('balance')}", {id: row.id}).then(response => {
           if (response.state == 'success') {
             this.$message.success(response.msg);
@@ -527,6 +540,8 @@
           } else {
             this.$message.error(response.msg);
           }
+        }).finally(() => {
+          this.loading = false;
         });
       },
       // 集中抄表
@@ -548,7 +563,12 @@
       },
       // 集中抄表保存
       concentratedSave() {
-        let postData = []
+        if (!this.concentratedData.length) {
+          this.concentratedVisible = false;
+          return;
+        }
+        this.loading = true;
+        let postData = [];
         if (this.concentratedType == 'E') {
           this.concentratedData.forEach(element => {
             if (element.electricity_meter_this_month) {
@@ -562,19 +582,20 @@
             }
           });
         }
-        axiosPost("{:url('saveCentralized')}", {data: postData, type: this.concentratedType})
-          .then(response => {
-            if (response.state == 'success') {
-              this.$message.success(response.msg);
-              this.concentratedVisible = false;
-              this.queryTable();
-              this.queryReadingTime();
-            } else if (response.state == 'warning') {
-              this.$message.warning(response.msg);
-            } else {
-              this.$message.error(response.msg);
-            }
-          });
+        axiosPost("{:url('saveCentralized')}", {data: postData, type: this.concentratedType}).then(response => {
+          if (response.state == 'success') {
+            this.$message.success(response.msg);
+            this.concentratedVisible = false;
+            this.queryTable();
+            this.queryReadingTime();
+          } else if (response.state == 'warning') {
+            this.$message.warning(response.msg);
+          } else {
+            this.$message.error(response.msg);
+          }
+        }).finally(() => {
+          this.loading = false;
+        });
       },
       // 明细账单
       handleFilter: function () {
