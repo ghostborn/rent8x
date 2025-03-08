@@ -22,8 +22,7 @@
         <t-row>
           <t-col :flex="4">
             <div style="margin-bottom: 15px;">待收金额</div>
-            <div style="font-size: 24px; font-weight: bold; color: #0052d9;">{{cardData.pending_amount}}
-            </div>
+            <div style="font-size: 24px; font-weight: bold; color: #0052d9;">{{cardData.pending_amount}}</div>
           </t-col>
           <t-col :flex="2" style="margin: 10px 0px 10px 10px;">
             <t-icon name="money" style="color: #0052d9" size="3em"/>
@@ -118,7 +117,6 @@
                  :show-header="false" @row-dblclick="onRowClick">
         </t-table>
       </t-card>
-
       <t-card bordered>
         <div style="margin-bottom: 10px;">
           合同提醒
@@ -127,17 +125,10 @@
                  size="small" :show-header="false" @row-dblclick="onContractClick">
         </t-table>
       </t-card>
-
-
     </t-col>
-
-
   </t-row>
 </t-space>
-
-
 {/block}
-
 
 {block name="script"}
 <script>
@@ -269,23 +260,40 @@
             this.$message.error('系统出错了!!!');
           }
         });
-
-
       },
 
       onRowClick: function (data) {
-
+        if (data.row.house_property_id != this.houseDef) {
+          axiosPost("{:url('house.property/sort')}", {'id': data.row.house_property_id}).then(response => {
+            if (response.state == 'success') {
+              location.href = "{:url('house.uncollected/index')}";
+            } else {
+              console.log('房产切换失败');
+            }
+          });
+        } else {
+          location.href = "{:url('house.uncollected/index')}";
+        }
       },
 
       onContractClick: function (data) {
-
-      }
+        if (data.row.house_property_id != this.houseDef) {
+          axiosPost("{:url('house.property/sort')}", {'id': data.row.house_property_id}).then(response => {
+            if (response.state == 'success') {
+              location.href = "{:url('house.contract/index')}";
+            } else {
+              console.log('房产切换失败');
+            }
+          });
+        } else {
+          location.href = "{:url('house.contract/index')}";
+        }
+      },
     }
   }
 </script>
 
 <style>
-
   td.cell-red {
     color: red;
   }
@@ -299,5 +307,4 @@
   /*  width: 99% !important;*/
   /*}*/
 </style>
-
 {/block}

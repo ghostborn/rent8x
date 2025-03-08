@@ -91,6 +91,20 @@ class Tenant extends Common
         return $this->returnSuccess('添加成功');
     }
 
+    public function delete()
+    {
+        $id = $this->request->param('id/d', 0);
+        $validate = new TenantValidate();
+        if (!$validate->scene('delete')->check(['id' => $id])) {
+            return $this->returnError('删除失败，' . $validate->getError() . '。');
+        }
+        if (!$property = TenantModel::find($id)) {
+            return $this->returnError('删除失败，记录不存在。');
+        }
+        $property->delete();
+        return $this->returnSuccess('删除成功。');
+    }
+
     public function upload()
     {
         $way = $this->request->post('way/s', '', 'trim');
@@ -98,8 +112,7 @@ class Tenant extends Common
         $file = request()->file('file');
         $name = $file->getOriginalName();
         // 上传到本地服务器
-        $savename = \think\facade\Filesystem::disk('public')->putFileAs('tenant/' . $way, $file,
-            time() . substr(strrchr($name, '.'), 0));
+        $savename = \think\facade\Filesystem::disk('public')->putFileAs('tenant/' . $way, $file, time() . substr(strrchr($name, '.'), 0));
         $house_property_id = $this->request->post('house_property_id/s', null, 'trim');
         $data = [
             'house_property_id' => $house_property_id,
@@ -131,7 +144,6 @@ class Tenant extends Common
         $photo->delete();
         $photoName = explode('/', $photo['url']);
         $photoUrl = app()->getRootPath();
-
         // 拼接完整的文件路径
         $filePath = $photoUrl . 'public/storage/' . implode('/', array_slice($photoName, 2));
         // 检查路径是否是一个文件
@@ -144,7 +156,6 @@ class Tenant extends Common
         } else {
             return $this->returnError('指定的路径不是一个文件。');
         }
-
 //
 //        unlink($photoUrl . '\public\storage\\' . $photoName[2] . '\\' . $photoName[3]);
 //        return $this->returnSuccess('删除成功。');

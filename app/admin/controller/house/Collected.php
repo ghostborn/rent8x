@@ -38,7 +38,7 @@ class Collected extends Common
         };
         $count = BillingModel::alias('a')
             ->join('HouseNumber b', 'a.house_property_id = b.house_property_id and a.house_number_id = b.id')
-            ->join('HouseNumber c', 'c.id = a.house_property_id')
+            ->join('HouseProperty c', 'c.id = a.house_property_id')
             ->where($conditions)
             ->count();
         $billing = BillingModel::where($conditions)
@@ -84,9 +84,9 @@ class Collected extends Common
         $parameter = $this->request->param('parameter/s', '');
         if ($parameter) {
             $conditions[] = function ($query) use ($parameter) {
-                $query->where('b.name', 'like', "%{parameter}%")
-                    ->whereOr('c.name', 'like', "%{parameter}%")
-                    ->whereOr('a.accounting_date', 'like', "%{parameter}%");
+                $query->where('b.name', 'like', "%{$parameter}%")
+                    ->whereOr('c.name', 'like', "%{$parameter}%")
+                    ->whereOr('a.accounting_date', 'like', "%{$parameter}%");
             };
         };
         $billing = BillingModel::where($conditions)

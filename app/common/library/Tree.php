@@ -31,7 +31,6 @@ class Tree
         return $this->tree($this->data);
     }
 
-
     public function tree($data, $pid = 0)
     {
         $result = [];
@@ -81,7 +80,6 @@ class Tree
         return $result;
     }
 
-
     public function getTreeListCheckLeaf($name = 'isLeaf')
     {
         $data = $this->getTreeList();
@@ -96,6 +94,4 @@ class Tree
         }
         return $data;
     }
-
-
 }

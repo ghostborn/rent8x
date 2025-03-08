@@ -28,13 +28,13 @@ class AdminMenu extends Validate
     {
         if ($value !== 0) {
             if (!$data = MenuModel::field('pid')->find($value)) {
-                return '上级不存在';
+                return '上级菜单不存在';
             }
             if ($data->pid) {
                 return '上级菜单不能使用子项';
             }
-            return true;
         }
+        return true;
     }
 
     public function sceneDelete()

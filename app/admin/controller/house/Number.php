@@ -19,9 +19,8 @@ class Number extends Common
 {
     public function index()
     {
-        return View::fetch('house/number/index');
+        return View::fetch('/house/number/index');
     }
-
 
     // 房间管理页面-获取房间信息
     public function getNumberMessage()
@@ -73,7 +72,6 @@ class Number extends Common
         }
         return $this->returnResult($numbers);
     }
-
 
     public function save()
     {

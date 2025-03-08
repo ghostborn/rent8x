@@ -65,7 +65,6 @@ class Common extends BaseController
             View::assign('layout_menu', $this->auth->menu($controller));
             View::assign('layout_token', $this->getToken());
             View::assign('current_route', $this->auth->currentRoute($controller));
-
         }
     }
 

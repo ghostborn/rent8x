@@ -60,7 +60,7 @@ class Report extends Common
         $charData = array();
         for ($i = 12; $i >= 0; $i--) {
             $month = clone $currentDate;
-            $accounting_month = $month->modify("--{$i} month")->format('Y-m');
+            $accounting_month = $month->modify("-{$i} month")->format('Y-m');
             $income = SumModel::where('house_property_id', 'in', $house_property_id)
                 ->where('accounting_date', $accounting_month)
                 ->where('type', TYPE_INCOME)
@@ -71,8 +71,7 @@ class Report extends Common
                 ->sum('amount');
             \array_push($charData, ['month' => $accounting_month, 'project' => '收入', 'money' => $income]);
             \array_push($charData, ['month' => $accounting_month, 'project' => '支出', 'money' => round($spending, 2)]);
-            \array_push($charData,
-                ['month' => $accounting_month, 'project' => '利润', 'money' => round($income - $spending, 2)]);
+            \array_push($charData, ['month' => $accounting_month, 'project' => '利润', 'money' => round($income - $spending, 2)]);
         }
         return $this->returnResult($charData);
     }
@@ -114,6 +113,4 @@ class Report extends Common
             return $this->returnResult($result);
         }
     }
-
-
 }

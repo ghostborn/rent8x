@@ -146,9 +146,6 @@ class Contract extends Common
             // 捕获异常并返回错误信息
             return $this->returnError('生成合同文件时出错:' . $e->getMessage());
         }
-
-
-
     }
 
 
@@ -160,8 +157,7 @@ class Contract extends Common
         $file = request()->file('file');
         $name = $file->getOriginalName();
         // 上传到本地服务器
-        $savename = \think\facade\Filesystem::disk('public')->putFileAs('contract/' . $way, $file,
-            time() . substr(strrchr($name, '.'), 0));
+        $savename = \think\facade\Filesystem::disk('public')->putFileAs('contract/' . $way, $file, time() . substr(strrchr($name, '.'), 0));
         $house_property_id = $this->request->post('house_property_id/s', null, 'trim');
         $house_number_id = $this->request->post('house_number_id/s', null, 'trim');
         $data = [

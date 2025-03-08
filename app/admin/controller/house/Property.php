@@ -75,8 +75,6 @@ class Property extends Common
         } else {
             return $this->returnError($result['msg']);
         }
-
     }
-
 
 }
