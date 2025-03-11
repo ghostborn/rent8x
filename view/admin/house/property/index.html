@@ -133,6 +133,7 @@
             } else {
               this.$message.error(response.msg);
             }
+          }).finally(() => {
             this.loading = false;
           });
         }

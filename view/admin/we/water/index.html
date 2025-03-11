@@ -23,7 +23,7 @@
                   @click="handleEdit(slotProps.row)">修改
         </t-button>
         <t-popconfirm v-if="slotProps.row.accounting_date == null" theme="danger" content="确认到账?"
-                      @confirm="handleAccount(slotProps.row)">
+                      @confirm="handleAccount(slotProps.row)" :disabled="loading">
           <t-button theme="warning" size="small">到账</t-button>
         </t-popconfirm>
       </t-space>
@@ -46,7 +46,7 @@
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -101,7 +101,9 @@
     },
     // 新增按钮
     insertButton: true,
-    disableDate: '2024-01-01',
+    disableDate: '2025-01-01',
+    // 加载
+    loading: false,
   };
 
   function f() {
@@ -142,6 +144,7 @@
         this.dialogVisible = true;
       },
       handleSave() {
+        this.loading = true;
         this.$refs.waterForm.validate().then((valid) => {
           if (valid == true) {
             if (this.formData.cycle[0] && this.formData.cycle[1]) {
@@ -157,8 +160,14 @@
                 } else {
                   this.$message.error(response.msg);
                 }
+              }).finally(() => {
+                this.loading = false;
               });
+            } else {
+              this.loading = false;
             }
+          } else {
+            this.loading = false;
           }
         });
       },
@@ -194,6 +203,8 @@
         this.dialogVisible = true;
       },
       handleAccount(row) {
+        if (this.loading) return;
+        this.loading = true;
         axiosPost("{:url('account')}", {id: row.id}).then(response => {
           if (response.state == 'success') {
             this.$message.success(response.msg);
@@ -203,6 +214,8 @@
           } else {
             this.$message.error(response.msg);
           }
+        }).finally(() => {
+          this.loading = false;
         });
       },
     }

@@ -3,7 +3,9 @@
 <t-card class="list-card-container" :bordered="false">
   <div style="margin-bottom: 10px;">
     <t-button theme="primary" style="margin-right: 10px;" @click="handleAdd" :disabled="insertButton">
-      <template #icon><t-icon name="add" /></template>
+      <template #icon>
+        <t-icon name="add"/>
+      </template>
       新建
     </t-button>
     <t-select v-model="meter_id" placeholder="请选择电表" clearable style="width: 150px;display: inline-block;"
@@ -18,9 +20,10 @@
     <template #op="slotProps">
       <t-space>
         <t-button v-if="slotProps.row.accounting_date == null" size="small"
-                  @click="handleEdit(slotProps.row)">修改</t-button>
+                  @click="handleEdit(slotProps.row)">修改
+        </t-button>
         <t-popconfirm v-if="slotProps.row.accounting_date == null" theme="danger" content="确认到账?"
-                      @confirm="handleAccount(slotProps.row)">
+                      @confirm="handleAccount(slotProps.row)" :disabled="loading">
           <t-button theme="warning" size="small">到账</t-button>
         </t-popconfirm>
       </t-space>
@@ -33,17 +36,17 @@
   <t-form ref="electricityForm" :data="formData" :rules="rules" :label-width="100" @submit="handleSave">
     <t-form-item label="计费周期" name="cycle">
       <t-date-range-picker v-model="formData.cycle" clearable format="YYYY-MM-DD" :style="{ width: '480px' }"
-                           :disable-date="{ before: disableDate }" />
+                           :disable-date="{ before: disableDate }"/>
     </t-form-item>
     <t-form-item label="总用量" name="master_dosage">
-      <t-input-number v-model="formData.master_dosage" :style="{ width: '480px' }" theme="normal" placeholder="请输入" />
+      <t-input-number v-model="formData.master_dosage" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
     </t-form-item>
     <t-form-item label="总金额" name="master_sum">
-      <t-input-number v-model="formData.master_sum" :style="{ width: '480px' }" theme="normal" placeholder="请输入" />
+      <t-input-number v-model="formData.master_sum" :style="{ width: '480px' }" theme="normal" placeholder="请输入"/>
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -55,16 +58,16 @@
     tableData: [],
     tableLoading: false,
     columns: [
-      { title: '表名', colKey: 'electricity_name', width: 90 },
-      { title: '开始日期', colKey: 'start_month', width: 120 },
-      { title: '结束日期', colKey: 'end_month', width: 120 },
-      { title: '总表金额', colKey: 'master_sum', width: 80 },
-      { title: '分表金额', colKey: 'detail_sum', width: 80 },
-      { title: '差额(总表-分表)', colKey: 'difference_sum', width: 80 },
-      { title: '总表用量', colKey: 'master_dosage', width: 80 },
-      { title: '分表用量', colKey: 'detail_dosage', width: 80 },
-      { title: '差量(总表-分表)', colKey: 'difference_dosage', width: 80 },
-      { title: '操作', colKey: 'op', width: 160, align: 'left', fixed: 'right', },
+      {title: '表名', colKey: 'electricity_name', width: 90},
+      {title: '开始日期', colKey: 'start_month', width: 120},
+      {title: '结束日期', colKey: 'end_month', width: 120},
+      {title: '总表金额', colKey: 'master_sum', width: 80},
+      {title: '分表金额', colKey: 'detail_sum', width: 80},
+      {title: '差额(总表-分表)', colKey: 'difference_sum', width: 80},
+      {title: '总表用量', colKey: 'master_dosage', width: 80},
+      {title: '分表用量', colKey: 'detail_dosage', width: 80},
+      {title: '差量(总表-分表)', colKey: 'difference_dosage', width: 80},
+      {title: '操作', colKey: 'op', width: 160, align: 'left', fixed: 'right',},
     ],
     // 分页
     pagination: {
@@ -78,32 +81,35 @@
     meterData: [],
     meter_id: '',
     dialogVisible: false,
-    formData: { 'cycle': [] },
+    formData: {'cycle': []},
     formHeader: '',
     rules: {
       cycle: [{
         validator: (val) => {
           if (val.length !== 2) {
-            return { result: false, message: '必填', type: 'error' };
+            return {result: false, message: '必填', type: 'error'};
           } else if (!val[0]) {
-            return { result: false, message: '请选择开始日期', type: 'error' };
+            return {result: false, message: '请选择开始日期', type: 'error'};
           } else if (!val[1]) {
-            return { result: false, message: '请选择结束日期', type: 'error' };
+            return {result: false, message: '请选择结束日期', type: 'error'};
           }
-          return { result: true };
+          return {result: true};
         }
       }],
-      master_dosage: [{ required: true, message: '必填' }],
-      master_sum: [{ required: true, message: '必填' }],
+      master_dosage: [{required: true, message: '必填'}],
+      master_sum: [{required: true, message: '必填'}],
     },
     // 新增按钮
     insertButton: true,
-    disableDate: '2024-01-01',
+    disableDate: '2025-01-01',
+    // 加载
+    loading: false,
   };
+
   function f() {
     return {
       init: function () {
-        axiosGet("{:url('we.meter/queryMeterId')}", { 'type': 'E' }).then(response => {
+        axiosGet("{:url('we.meter/queryMeterId')}", {'type': 'E'}).then(response => {
           if (response.code == 1) {
             this.meterData = response.data;
             if (response.data.length > 0) {
@@ -116,7 +122,7 @@
         });
       },
       queryTable: function () {
-        axiosGet("{:url('queryElectricity')}", { 'meter_id': this.meter_id }).then(response => {
+        axiosGet("{:url('queryElectricity')}", {'meter_id': this.meter_id}).then(response => {
           if (response.code == 1) {
             this.tableData = response.data;
             this.pagination.total = response.count;
@@ -133,11 +139,12 @@
       handleAdd() {
         this.disableDate = '2024-01-01';
         this.$refs.electricityForm.reset();
-        this.formData = { 'meter_id': this.meter_id, 'house_property_id': this.houseDef, 'cycle': [] };
-        this.formHeader = this.houseName + '电表 - 新增电费';;
+        this.formData = {'meter_id': this.meter_id, 'house_property_id': this.houseDef, 'cycle': []};
+        this.formHeader = this.houseName + '电表 - 新增电费';
         this.dialogVisible = true;
       },
       handleSave() {
+        this.loading = true;
         this.$refs.electricityForm.validate().then((valid) => {
           if (valid == true) {
             if (this.formData.cycle[0] && this.formData.cycle[1]) {
@@ -153,8 +160,14 @@
                 } else {
                   this.$message.error(response.msg);
                 }
+              }).finally(() => {
+                this.loading = false;
               });
+            } else {
+              this.loading = false;
             }
+          } else {
+            this.loading = false;
           }
         });
       },
@@ -183,13 +196,15 @@
           this.disableDate = '2024-01-01';
         }
         this.$refs.electricityForm.reset();
-        this.formData = { ...row };
+        this.formData = {...row};
         this.formData.cycle = [row.start_month, row.end_month ? row.end_month : ''];
         this.formHeader = '修改总电费';
         this.dialogVisible = true;
       },
       handleAccount(row) {
-        axiosPost("{:url('account')}", { id: row.id }).then(response => {
+        if (this.loading) return;
+        this.loading = true;
+        axiosPost("{:url('account')}", {id: row.id}).then(response => {
           if (response.state == 'success') {
             this.$message.success(response.msg);
             this.queryTable();
@@ -198,6 +213,8 @@
           } else {
             this.$message.error(response.msg);
           }
+        }).finally(() => {
+          this.loading = false;
         });
       },
     }
