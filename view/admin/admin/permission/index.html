@@ -3,7 +3,9 @@
 <t-card class="list-card-container" :bordered="false">
   <div style="margin-bottom: 10px;">
     <t-button theme="primary" style="margin-right: 10px;" @click="handleAdd" :disabled="buttonDisabled">
-      <template #icon><t-icon name="add" /></template>
+      <template #icon>
+        <t-icon name="add"/>
+      </template>
       新建
     </t-button>
     <t-select v-model="role_id" placeholder="请选择角色" style="width: 150px;display: inline-block;" @change="roleChange">
@@ -13,11 +15,12 @@
     </t-select>
   </div>
   <t-table :data="tableData" :columns="columns" row-key="id" vertical-align="top" :bordered="true" size="small"
-           active-row-type="single" :hover="true" :loading="tableLoading" :pagination="pagination" @page-change="onPageChange">
+           active-row-type="single" :hover="true" :loading="tableLoading" :pagination="pagination"
+           @page-change="onPageChange">
     <template #op="slotProps">
       <t-space>
         <t-button size="small" @click="handleEdit(slotProps.row)">修改</t-button>
-        <t-popconfirm theme="danger" content="确认删除?" @confirm="handleDelete(slotProps.row)">
+        <t-popconfirm theme="danger" content="确认删除?" @confirm="handleDelete(slotProps.row)" :disabled="loading">
           <t-button theme="danger" size="small">删除</t-button>
         </t-popconfirm>
       </t-space>
@@ -37,14 +40,14 @@
       </t-select>
     </t-form-item>
     <t-form-item label="控制器" name="controller">
-      <t-input v-model="formData.controller" :style="{ width: '480px' }" placeholder="请输入" />
+      <t-input v-model="formData.controller" :style="{ width: '480px' }" placeholder="请输入"/>
     </t-form-item>
     <t-form-item label="操作" name="action">
-      <t-input v-model="formData.action" :style="{ width: '480px' }" placeholder="请输入" />
+      <t-input v-model="formData.action" :style="{ width: '480px' }" placeholder="请输入"/>
     </t-form-item>
     <t-form-item style="float: right">
       <t-button variant="outline" @click="dialogVisible = false" style="margin-right: 5px;">取消</t-button>
-      <t-button theme="primary" type="submit">确定</t-button>
+      <t-button theme="primary" type="submit" :disabled="loading">确定</t-button>
     </t-form-item>
   </t-form>
 </t-dialog>
@@ -56,10 +59,10 @@
     tableData: [],
     tableLoading: false,
     columns: [
-      { title: '角色', colKey: 'role_name', width: 35, fixed: 'left', },
-      { title: '允许的控制器', colKey: 'controller', width: 50 },
-      { title: '允许的操作', colKey: 'action', width: 160 },
-      { title: '操作', colKey: 'op', width: 80, fixed: 'right', },
+      {title: '角色', colKey: 'role_name', width: 35, fixed: 'left',},
+      {title: '允许的控制器', colKey: 'controller', width: 50},
+      {title: '允许的操作', colKey: 'action', width: 160},
+      {title: '操作', colKey: 'op', width: 80, fixed: 'right',},
     ],
     // 分页
     pagination: {
@@ -73,12 +76,15 @@
     formData: {},
     formHeader: '',
     rules: {
-      controller: [{ required: true, message: '必填', trigger: 'blur' }],
-      action: [{ required: true, message: '必填' }],
+      controller: [{required: true, message: '必填', trigger: 'blur'}],
+      action: [{required: true, message: '必填'}],
     },
     role_id: '',
     roleData: [],
+    // 加载
+    loading: false,
   };
+
   function f() {
     return {
       init: function () {
@@ -96,7 +102,7 @@
       },
       queryTable() {
         this.tableLoading = true;
-        axiosGet("{:url('query')}", { 'admin_role_id': this.role_id }).then(response => {
+        axiosGet("{:url('query')}", {'admin_role_id': this.role_id}).then(response => {
           if (response.code == 1) {
             this.tableData = response.data;
             this.pagination.total = response.count;
@@ -113,11 +119,12 @@
       },
       handleAdd() {
         this.$refs.permissiomForm.reset();
-        this.formData = { 'admin_role_id': this.role_id };
+        this.formData = {'admin_role_id': this.role_id};
         this.formHeader = '新增权限';
         this.dialogVisible = true;
       },
       handleSave() {
+        this.loading = true;
         this.$refs.permissiomForm.validate().then((valid) => {
           if (valid == true) {
             axiosPost("{:url('save')}", this.formData).then(response => {
@@ -130,17 +137,23 @@
               } else {
                 this.$message.error(response.msg);
               }
+            }).finally(() => {
+              this.loading = false;
             });
+          } else {
+            this.loading = false;
           }
         });
       },
       handleEdit(row) {
         this.$refs.permissiomForm.reset();
-        this.formData = { ...row };
+        this.formData = {...row};
         this.formHeader = '修改权限';
         this.dialogVisible = true;
       },
       handleDelete(row) {
+        if (this.loading) return;
+        this.loading = true;
         axiosPost("{:url('delete')}", row).then(response => {
           if (response.state == 'success') {
             this.$message.success(response.msg);
@@ -150,6 +163,8 @@
           } else {
             this.$message.error(response.msg);
           }
+        }).finally(() => {
+          this.loading = false;
         });
       },
       onPageChange: function (pageInfo) {
